@@ -14,8 +14,7 @@ import argparse
 ##
 ## run
 ##   registry.py -h
-## to get more help
-## or read README.md
+##   to get more help
 ##
 ## important: after removing the tags, run the garbage collector
 ## on your registry host:
@@ -120,7 +119,7 @@ class Registry:
     def delete_tag(self, image_name, tag, dry_run):
         if dry_run:
             print 'would delete tag {}'.format(tag)
-            return True
+            return False
 
         tag_digest = self.get_tag_digest(image_name, tag)
 
