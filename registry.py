@@ -247,7 +247,7 @@ for more detail on garbage collection read here:
 
 
 def delete_tags(
-    registry, image_name, dry_run, tags_to_delete, keep_last_versions):
+    registry, image_name, dry_run, tags_to_delete):
 
     for tag in tags_to_delete:
         print "  deleting tag {}".format(tag)
@@ -304,7 +304,7 @@ def main_loop(args):
 
             delete_tags(
                 registry, image_name, args.dry_run,
-                tags_list_to_delete, keep_last_versions)
+                tags_list_to_delete)
 
 if __name__ == "__main__":
     args = parse_args()
