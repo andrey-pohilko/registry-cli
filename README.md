@@ -39,21 +39,27 @@ Same as above but with layers
 ## Deleting images 
 
 Keep only last 10 versions (useful for CI):
-Delete all tags of all images but keep last 10 tags (you can put it to your build script
+Delete all tags of all images but keep last 10 tags (you can put this command to your build script
 after building images)
+```
   registry.py -l user:pass -r https://example.com:5000 --delete
+```
+  If number of tags is less than 10 it will not delete any
 
-  If number of tags is less then 10 it will not delete any
-
-You can specify number of tags to keep instead of 10, e.g. 5:
+You can change the number of tags to keep, e.g. 5:
+```
   registry.py -l user:pass -r https://example.com:5000 --delete --num 5
+```
 
 Delete all tags for particular image (e.g. delete all ubuntu tags):
+```
   registry.py -l user:pass -r https://example.com:5000 -i ubuntu --delete-all
+```
   
 Delete all tags for all images (do you really want to do it?):
+```
   registry.py -l user:pass -r https://example.com:5000 --delete-all
-  
+```
   
 ## Important notes: 
 
