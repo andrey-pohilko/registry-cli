@@ -68,14 +68,18 @@ Delete all tags for all images (do you really want to do it?):
 garbage collection. So, make sure you run something like below 
 (or put them in your crontab):
 ```
-   docker-compose -f [path_to_your_docker_compose_file] run \
+  docker stop registry:2
+  docker-compose -f [path_to_your_docker_compose_file] run \
        registry bin/registry garbage-collect \
        /etc/docker/registry/config.yml
+  docker start registry:2
 ```  
 or (if you are not using docker-compose):
 ```
-   docker run registry:2 bin/registry garbage-collect \
+  docker stop registry:2
+  docker run registry:2 bin/registry garbage-collect \
        /etc/docker/registry/config.yml
+  docker start registry:2
 ```       
 for more detail on garbage collection read here:
    https://docs.docker.com/registry/garbage-collection/
