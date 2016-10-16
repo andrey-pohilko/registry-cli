@@ -140,7 +140,7 @@ class Registry:
         if dry_run:
             print 'would delete layer {}'.format(layer_digest)
             return False
-
+        
         print 'deleting layer {}'.format(layer_digest),
 
         delete_result = self.send('/v2/{}/blobs/{}'.format(
@@ -251,9 +251,13 @@ def delete_tags(
 
     for tag in tags_to_delete:
         print "  deleting tag {}".format(tag)
-        for layer in registry.list_tag_layers(image_name, tag):
-            layer_digest = layer['digest']
-            registry.delete_tag_layer(image_name, layer_digest, dry_run)
+
+##        deleting layers is disabled because 
+##        it also deletes shared layers
+##        
+##        for layer in registry.list_tag_layers(image_name, tag):
+##            layer_digest = layer['digest']
+##            registry.delete_tag_layer(image_name, layer_digest, dry_run)
 
         registry.delete_tag(image_name, tag, dry_run)
 
