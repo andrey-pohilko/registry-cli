@@ -47,12 +47,14 @@ class Registry:
     # store last error if any
     __error = None
 
-    def __init__(self, host, userpass):
-        if not ':' in userpass:
-            print "Please provide -l in the form USER:PASSWORD"
-            exit(1)
+    def __init__(self, host, login):
+        if login != None:
+            if not ':' in login:
+                print "Please provide -l in the form USER:PASSWORD"
+                exit(1)
 
-        (self.username, self.password) = userpass.split(':')
+            (self.username, self.password) = login.split(':')
+
         self.hostname = host
 
     def __atoi(self, text):
@@ -71,7 +73,9 @@ class Registry:
             result = requests.request(
                 method, "{}{}".format(self.hostname, path),
                 headers = self.HEADERS,
-                auth=(self.username, self.password))
+                auth=(None if self.username == ""
+                      else (self.username, self.password)))
+
         except Exception as error:
             print "cannot connect to {}\nerror {}".format(
                 self.hostname,
@@ -189,7 +193,7 @@ for more detail on garbage collection read here:
     parser.add_argument(
         '-l','--login',
         help="Login and password to access to docker registry",
-        required=True,
+        required=False,
         metavar="USER:PASSWORD")
 
     parser.add_argument(
@@ -312,4 +316,9 @@ def main_loop(args):
 
 if __name__ == "__main__":
     args = parse_args()
-    main_loop(args)
+    try:
+        main_loop(args)
+    except KeyboardInterrupt:
+        print "Ctrl-C pressed, quitting"
+        exit(1)
+
