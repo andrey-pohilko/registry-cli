@@ -166,7 +166,10 @@ class Registry:
             print "error {}".format(self.__error)
             return []
 
-        layers = json.loads(layers_result.text)['layers']
+        if json.loads(layers_result.text)['schemaVersion'] == 1:
+            layers = json.loads(layers_result.text)['fsLayers']
+        else:
+            layers = json.loads(layers_result.text)['layers']
 
         return layers
 
@@ -300,8 +303,12 @@ def main_loop(args):
             print "  tag: {}".format(tag)
             if args.layers:
                 for layer in registry.list_tag_layers(image_name, tag):
-                    print "    layer: {}, size: {}".format(
-                        layer['digest'], layer['size'])
+                    if layer.has_key('size'):
+                        print "    layer: {}, size: {}".format(
+                            layer['digest'], layer['size'])
+                    else:
+                        print "    layer: {}".format(
+                            layer['blobSum'])
 
         # delete tags if told so
         if args.delete or args.delete_all:
