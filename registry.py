@@ -71,13 +71,13 @@ class Registry:
     def send(self, path, method="GET"):
         try:
             result = requests.request(
-                method, "{}{}".format(self.hostname, path),
+                method, "{0}{1}".format(self.hostname, path),
                 headers = self.HEADERS,
                 auth=(None if self.username == ""
                       else (self.username, self.password)))
 
         except Exception as error:
-            print "cannot connect to {}\nerror {}".format(
+            print "cannot connect to {0}\nerror {1}".format(
                 self.hostname,
                 error)
             exit(1)
@@ -96,7 +96,7 @@ class Registry:
         return json.loads(result.text)['repositories']
 
     def list_tags(self, image_name):
-        result = self.send("/v2/{}/tags/list".format(image_name))
+        result = self.send("/v2/{0}/tags/list".format(image_name))
         if result == None:
             return []
 
@@ -108,12 +108,12 @@ class Registry:
         return tags_list
 
     def get_tag_digest(self, image_name, tag):
-        image_headers = self.send("/v2/{}/manifests/{}".format(
+        image_headers = self.send("/v2/{0}/manifests/{1}".format(
             image_name, tag), method="HEAD")
 
         if image_headers == None:
 
-            print "  tag digest not found: {}".format(self.__error)
+            print "  tag digest not found: {0}".format(self.__error)
             return None
 
         tag_digest = image_headers.headers['Docker-Content-Digest']
@@ -122,7 +122,7 @@ class Registry:
 
     def delete_tag(self, image_name, tag, dry_run):
         if dry_run:
-            print 'would delete tag {}'.format(tag)
+            print 'would delete tag {0}'.format(tag)
             return False
 
         tag_digest = self.get_tag_digest(image_name, tag)
@@ -130,11 +130,11 @@ class Registry:
         if tag_digest == None:
             return False
 
-        delete_result = self.send("/v2/{}/manifests/{}".format(
+        delete_result = self.send("/v2/{0}/manifests/{1}".format(
             image_name, tag_digest), method="DELETE")
 
         if delete_result == None:
-            print "failed, error: {}".format(self.__error)
+            print "failed, error: {0}".format(self.__error)
             return False
 
         print "done"
@@ -142,16 +142,16 @@ class Registry:
 
     def delete_tag_layer(self, image_name, layer_digest, dry_run):
         if dry_run:
-            print 'would delete layer {}'.format(layer_digest)
+            print 'would delete layer {0}'.format(layer_digest)
             return False
         
-        print 'deleting layer {}'.format(layer_digest),
+        print 'deleting layer {0}'.format(layer_digest),
 
-        delete_result = self.send('/v2/{}/blobs/{}'.format(
+        delete_result = self.send('/v2/{0}/blobs/{1}'.format(
             image_name, layer_digest), method='DELETE')
 
         if delete_result == None:
-            print "failed, error: {}".format(self.__error)
+            print "failed, error: {0}".format(self.__error)
             return False
 
         print "done"
@@ -159,11 +159,11 @@ class Registry:
 
 
     def list_tag_layers(self, image_name, tag):
-        layers_result = self.send("/v2/{}/manifests/{}".format(
+        layers_result = self.send("/v2/{0}/manifests/{1}".format(
             image_name, tag))
 
         if layers_result == None:
-            print "error {}".format(self.__error)
+            print "error {0}".format(self.__error)
             return []
 
         if json.loads(layers_result.text)['schemaVersion'] == 1:
@@ -207,7 +207,7 @@ for more detail on garbage collection read here:
 
     parser.add_argument(
         '-d','--delete',
-        help=('If specified, delete all but last {} tags '
+        help=('If specified, delete all but last {0} tags '
               'of all images').format(CONST_KEEP_LAST_VERSIONS),
         action='store_const',
         default=False,
@@ -216,7 +216,7 @@ for more detail on garbage collection read here:
     parser.add_argument(
         '-n','--num',
         help=('Set the number of tags to keep'
-              '({} if not set)').format(CONST_KEEP_LAST_VERSIONS),
+              '({0} if not set)').format(CONST_KEEP_LAST_VERSIONS),
         default=CONST_KEEP_LAST_VERSIONS,
         nargs='?',
         metavar='N')
@@ -257,7 +257,7 @@ def delete_tags(
     registry, image_name, dry_run, tags_to_delete):
 
     for tag in tags_to_delete:
-        print "  deleting tag {}".format(tag)
+        print "  deleting tag {0}".format(tag)
 
 ##        deleting layers is disabled because 
 ##        it also deletes shared layers
@@ -275,7 +275,7 @@ def main_loop(args):
 
     registry = Registry(args.host, args.login)
     if args.delete:
-        print "Will delete all but {} last tags".format(keep_last_versions)
+        print "Will delete all but {0} last tags".format(keep_last_versions)
 
     if args.image != None:
         image_list = args.image
@@ -285,7 +285,7 @@ def main_loop(args):
     # loop through registry's images
     # or through the ones given in command line
     for image_name in image_list:
-        print "Image: {}".format(image_name)
+        print "Image: {0}".format(image_name)
 
         # get tags from arguments if any
         if ":" in image_name:
@@ -300,14 +300,14 @@ def main_loop(args):
 
         # print tags and optionally layers
         for tag in tags_list:
-            print "  tag: {}".format(tag)
+            print "  tag: {0}".format(tag)
             if args.layers:
                 for layer in registry.list_tag_layers(image_name, tag):
                     if layer.has_key('size'):
-                        print "    layer: {}, size: {}".format(
+                        print "    layer: {0}, size: {1}".format(
                             layer['digest'], layer['size'])
                     else:
-                        print "    layer: {}".format(
+                        print "    layer: {0}".format(
                             layer['blobSum'])
 
         # delete tags if told so
