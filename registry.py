@@ -2,6 +2,7 @@
 
 import requests
 from requests.auth import HTTPBasicAuth
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import json
 import re
 import argparse
@@ -39,6 +40,7 @@ class Registry:
     username = ""
     password = ""
     hostname = ""
+    no_validate_ssl = False;
 
     # this is required for proper digest processing
     HEADERS = {"Accept":
@@ -47,7 +49,7 @@ class Registry:
     # store last error if any
     __error = None
 
-    def __init__(self, host, login):
+    def __init__(self, host, login, no_validate_ssl):
         if login != None:
             if not ':' in login:
                 print "Please provide -l in the form USER:PASSWORD"
@@ -56,6 +58,7 @@ class Registry:
             (self.username, self.password) = login.split(':')
 
         self.hostname = host
+        self.no_validate_ssl = no_validate_ssl
 
     def __atoi(self, text):
         return int(text) if text.isdigit() else text
@@ -74,7 +77,8 @@ class Registry:
                 method, "{0}{1}".format(self.hostname, path),
                 headers = self.HEADERS,
                 auth=(None if self.username == ""
-                      else (self.username, self.password)))
+                      else (self.username, self.password)),
+                verify = not self.no_validate_ssl)
 
         except Exception as error:
             print "cannot connect to {0}\nerror {1}".format(
@@ -120,12 +124,16 @@ class Registry:
 
         return tag_digest
 
-    def delete_tag(self, image_name, tag, dry_run):
+    def delete_tag(self, image_name, tag, dry_run, tag_digests_to_ignore):
         if dry_run:
             print 'would delete tag {0}'.format(tag)
             return False
 
         tag_digest = self.get_tag_digest(image_name, tag)
+
+        if tag_digest in tag_digests_to_ignore:
+            print "Digest {0} for tag {1} is referenced by another tag or has already been deleted and will be ignored".format(tag_digest, tag)
+            return True
 
         if tag_digest == None:
             return False
@@ -136,6 +144,8 @@ class Registry:
         if delete_result == None:
             print "failed, error: {0}".format(self.__error)
             return False
+
+        tag_digests_to_ignore.append(tag_digest)
 
         print "done"
         return True
@@ -233,7 +243,35 @@ for more detail on garbage collection read here:
         '-i','--image',
         help='Specify images and tags to list/delete',
         nargs='+',
-        metavar="IMAGE:[TAG]")
+        metavar="IMAGE:[TAG]")    
+
+    parser.add_argument(
+        '--keep-tags',
+        nargs='+',
+        help="List of tags that will be omitted from deletion if used in combination with --delete or --delete-all",
+        required=False,
+        default=[])
+
+    parser.add_argument(
+        '--tags-like',
+        nargs='+',
+        help="List of tags (regexp check) that will be handled",
+        required=False,
+        default=[])
+
+    parser.add_argument(
+        '--keep-tags-like',
+        nargs='+',
+        help="List of tags (regexp check) that will be omitted from deletion if used in combination with --delete or --delete-all",
+        required=False,
+        default=[])
+
+    parser.add_argument(
+        '--no-validate-ssl',
+        help="Disable ssl validation",        
+        action='store_const',
+        default=False,
+        const=True)
 
     parser.add_argument(
         '--delete-all',
@@ -254,9 +292,28 @@ for more detail on garbage collection read here:
 
 
 def delete_tags(
-    registry, image_name, dry_run, tags_to_delete):
+    registry, image_name, dry_run, tags_to_delete, tags_to_keep):
+
+    keep_tag_digests = []
+
+    if tags_to_keep:
+        print "Getting digests for tags to keep:"
+        for tag in tags_to_keep:
+
+            print "Getting digest for tag {0}".format(tag)
+            digest = registry.get_tag_digest(image_name, tag)
+            if digest is None:            
+                print "Tag {0} does not exist for image {1}. Ignore here.".format(tag, image_name)
+                continue
+
+            print "Keep digest {0} for tag {1}".format(digest, tag)
+
+            keep_tag_digests.append(digest)
 
     for tag in tags_to_delete:
+        if tag in tags_to_keep:
+            continue
+
         print "  deleting tag {0}".format(tag)
 
 ##        deleting layers is disabled because 
@@ -266,14 +323,17 @@ def delete_tags(
 ##            layer_digest = layer['digest']
 ##            registry.delete_tag_layer(image_name, layer_digest, dry_run)
 
-        registry.delete_tag(image_name, tag, dry_run)
+        registry.delete_tag(image_name, tag, dry_run, keep_tag_digests)
 
 
 def main_loop(args):
 
     keep_last_versions = int(args.num)
 
-    registry = Registry(args.host, args.login)
+    if args.no_validate_ssl:        
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+    registry = Registry(args.host, args.login, args.no_validate_ssl)
     if args.delete:
         print "Will delete all but {0} last tags".format(keep_last_versions)
 
@@ -285,20 +345,34 @@ def main_loop(args):
     # loop through registry's images
     # or through the ones given in command line
     for image_name in image_list:
+        print "---------------------------------"
         print "Image: {0}".format(image_name)
+
+        tags_list = set()
+        all_tags_list = registry.list_tags(image_name)
+
+        if not all_tags_list:
+                print "  no tags!"
+                continue
+
+        if args.tags_like:
+            for tag_like in args.tags_like:
+                print "tag like: {0}".format(tag_like)
+                for tag in all_tags_list:   
+                    if re.search(tag_like, tag):
+                        print "Adding {0} to tags list".format(tag)
+                        tags_list.add(tag)
 
         # get tags from arguments if any
         if ":" in image_name:
             (image_name, tag_name) = image_name.split(":")
-            tags_list = [tag_name]
-        else:
-            tags_list = registry.list_tags(image_name)
+            tags_list.add(tag_name)
 
-        if tags_list == None or tags_list == []:
-            print "  no tags!"
-            continue
 
-        # print tags and optionally layers
+        if len(tags_list) == 0:
+            tags_list.update(all_tags_list)
+
+        # print tags and optionally layers        
         for tag in tags_list:
             print "  tag: {0}".format(tag)
             if args.layers:
@@ -310,6 +384,18 @@ def main_loop(args):
                         print "    layer: {0}".format(
                             layer['blobSum'])
 
+        # add tags to "tags_to_keep" list, if we have regexp "tags_to_keep" entries:
+        if args.keep_tags_like:
+            for keep_like in args.keep_tags_like:
+                print "keep tag like: {0}".format(keep_like)
+                for tag in tags_list:
+                    if re.search(keep_like, tag):
+                        print "Adding {0} to keep tags list".format(tag)
+                        args.keep_tags.append(tag)
+
+
+
+
         # delete tags if told so
         if args.delete or args.delete_all:
             if args.delete_all:
@@ -319,7 +405,7 @@ def main_loop(args):
 
             delete_tags(
                 registry, image_name, args.dry_run,
-                tags_list_to_delete)
+                tags_list_to_delete, args.keep_tags)
 
 if __name__ == "__main__":
     args = parse_args()

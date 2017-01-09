@@ -51,6 +51,23 @@ You can change the number of tags to keep, e.g. 5:
   registry.py -l user:pass -r https://example.com:5000 --delete --num 5
 ```
 
+You may also specify tags to be deleted using a list of regexp based names.
+The following command would delete all tags containing "snapshot-" and beginning with "stable-" and a 4 digit number:
+
+```
+  registry.py -l user:pass -r https://example.com:5000 --delete --tags-like "snapshot-" "^stable-[0-9]{4}.*"
+```
+
+As one manifest may be referenced by more than one tag, you may add tags, whose manifests should NOT be deleted.
+A tag that would otherwise be deleted, but whose manifest references one of those "kept" tags, is spared for deletion.
+In the following case, all tags beginning with "snapshot-" will be deleted, safe those whose manifest point to "stable" or "latest"
+
+```
+  registry.py -l user:pass -r https://example.com:5000 --delete --tags-like "snapshot-" --keep-tags "stable" "latest"
+```
+The last parameter is also available as regexp option with "--keep-tags-like".
+
+
 Delete all tags for particular image (e.g. delete all ubuntu tags):
 ```
   registry.py -l user:pass -r https://example.com:5000 -i ubuntu --delete-all
@@ -60,6 +77,14 @@ Delete all tags for all images (do you really want to do it?):
 ```
   registry.py -l user:pass -r https://example.com:5000 --delete-all
 ```
+
+## Disable ssl verification
+
+If you are using docker registry with a self signed ssl certificate, you can disable ssl verification:
+```
+  registry.py -l user:pass -r --no-validate-ssl https://example.com:5000
+```
+
   
 ## Important notes: 
 
