@@ -399,9 +399,9 @@ def main_loop(args):
         # delete tags if told so
         if args.delete or args.delete_all:
             if args.delete_all:
-                tags_list_to_delete = tags_list
+                tags_list_to_delete = list(tags_list)
             else:
-                tags_list_to_delete = tags_list[:-keep_last_versions]
+                tags_list_to_delete = list(tags_list)[:-keep_last_versions]
 
             delete_tags(
                 registry, image_name, args.dry_run,
