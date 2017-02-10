@@ -62,7 +62,7 @@ class Registry:
                 r.last_error = "Please provide -l in the form USER:PASSWORD"
                 print(r.last_error)
                 exit(1)
-            (r.username, r.password) = login.split(':')
+            (r.username, r.password) = login.split(':', 1)
 
         r.hostname = host
         r.no_validate_ssl = no_validate_ssl
