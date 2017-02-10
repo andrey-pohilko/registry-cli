@@ -60,16 +60,18 @@ class Registry:
         self.hostname = host
         self.no_validate_ssl = no_validate_ssl
 
-    def __atoi(self, text):
+    @staticmethod
+    def __atoi(text):
         return int(text) if text.isdigit() else text
 
-    def __natural_keys(self, text):
+    @staticmethod
+    def natural_keys(text):
         '''
         alist.sort(key=natural_keys) sorts in human order
         http://nedbatchelder.com/blog/200712/human_sorting.html
         (See Toothy's implementation in the comments)
         '''
-        return [ self.__atoi(c) for c in re.split('(\d+)', text) ]
+        return [ Registry.__atoi(c) for c in re.split('(\d+)', text) ]
 
     def send(self, path, method="GET"):
         try:
@@ -107,7 +109,7 @@ class Registry:
         tags_list = json.loads(result.text)['tags']
 
         if tags_list != None:
-            tags_list.sort(key=self.__natural_keys)
+            tags_list.sort(key=Registry.natural_keys)
 
         return tags_list
 
@@ -401,7 +403,7 @@ def main_loop(args):
             if args.delete_all:
                 tags_list_to_delete = list(tags_list)
             else:
-                tags_list_to_delete = list(tags_list)[:-keep_last_versions]
+                tags_list_to_delete = sorted(tags_list, key=Registry.natural_keys)[:-keep_last_versions]
 
             delete_tags(
                 registry, image_name, args.dry_run,
