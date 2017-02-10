@@ -120,8 +120,23 @@ For more on docker-registry configuration, read here:
 You may get `Functionality not supported` error when this option is not enabled.
 
 
+## Contribution
+You are very welcome to contribute to this script. Of course, when making changes, 
+please include your changes into `test.py` and run tests to check that your changes 
+do not break existing functionality.
+
+For tests to work, install `mock` library
+```
+  pip install mock
+```
+
+Running tests is as simple
+```
+  python test.py
+```
+
+
 # Contact
 
 Please feel free to contact me at anoxis@gmail.com if you wish to add more functionality 
 or want to contribute.
-  
