@@ -34,31 +34,41 @@ import argparse
 # number of image versions to keep
 CONST_KEEP_LAST_VERSIONS = 10
 
+# this class is created for testing
+class Requests:
+    def request(self, method, url, **kwargs):
+        return requests.request(method, url, **kwargs)
 
 # class to manipulate registry
 class Registry:
-    username = ""
-    password = ""
-    hostname = ""
-    no_validate_ssl = False;
 
     # this is required for proper digest processing
     HEADERS = {"Accept":
                "application/vnd.docker.distribution.manifest.v2+json"}
 
-    # store last error if any
-    __error = None
+    def __init__(self):
+        self.username = None
+        self.password = None
+        self.hostname = None
+        self.no_validate_ssl = False
+        self.http = None
+        self.last_error = None
 
-    def __init__(self, host, login, no_validate_ssl):
+    @staticmethod
+    def create(host, login, no_validate_ssl):
+        r = Registry
         if login != None:
             if not ':' in login:
-                print "Please provide -l in the form USER:PASSWORD"
+                r.last_error = "Please provide -l in the form USER:PASSWORD"
+                print(r.last_error)
                 exit(1)
+            (r.username, r.password) = login.split(':')
 
-            (self.username, self.password) = login.split(':')
+        r.hostname = host
+        r.no_validate_ssl = no_validate_ssl
+        r.http = Requests
+        return r
 
-        self.hostname = host
-        self.no_validate_ssl = no_validate_ssl
 
     @staticmethod
     def __atoi(text):
@@ -73,25 +83,26 @@ class Registry:
         '''
         return [ Registry.__atoi(c) for c in re.split('(\d+)', text) ]
 
-    def send(self, path, method="GET"):
-        try:
-            result = requests.request(
-                method, "{0}{1}".format(self.hostname, path),
-                headers = self.HEADERS,
-                auth=(None if self.username == ""
-                      else (self.username, self.password)),
-                verify = not self.no_validate_ssl)
 
-        except Exception as error:
-            print "cannot connect to {0}\nerror {1}".format(
-                self.hostname,
-                error)
-            exit(1)
+    def send(self, path, method="GET"):
+        # try:
+        result = self.http.request(
+            method, "{0}{1}".format(self.hostname, path),
+            headers = self.HEADERS,
+            auth=(None if self.username == ""
+                  else (self.username, self.password)),
+            verify = not self.no_validate_ssl)
+
+        # except Exception as error:
+        #     print("cannot connect to {0}\nerror {1}".format(
+        #         self.hostname,
+        #         error))
+        #     exit(1)
         if str(result.status_code)[0] == '2':
-            self.__error = None
+            self.last_error = None
             return result
 
-        self.__error=result.status_code
+        self.last_error=result.status_code
         return None
 
     def list_images(self):
@@ -106,7 +117,11 @@ class Registry:
         if result == None:
             return []
 
-        tags_list = json.loads(result.text)['tags']
+        try:
+            tags_list = json.loads(result.text)['tags']
+        except ValueError:
+            self.last_error = "list_tags: invalid json response"
+            return []
 
         if tags_list != None:
             tags_list.sort(key=Registry.natural_keys)
@@ -118,8 +133,7 @@ class Registry:
             image_name, tag), method="HEAD")
 
         if image_headers == None:
-
-            print "  tag digest not found: {0}".format(self.__error)
+            print("  tag digest not found: {0}".format(self.last_error))
             return None
 
         tag_digest = image_headers.headers['Docker-Content-Digest']
@@ -144,7 +158,7 @@ class Registry:
             image_name, tag_digest), method="DELETE")
 
         if delete_result == None:
-            print "failed, error: {0}".format(self.__error)
+            print "failed, error: {0}".format(self.last_error)
             return False
 
         tag_digests_to_ignore.append(tag_digest)
@@ -163,7 +177,7 @@ class Registry:
             image_name, layer_digest), method='DELETE')
 
         if delete_result == None:
-            print "failed, error: {0}".format(self.__error)
+            print "failed, error: {0}".format(self.last_error)
             return False
 
         print "done"
@@ -175,17 +189,18 @@ class Registry:
             image_name, tag))
 
         if layers_result == None:
-            print "error {0}".format(self.__error)
+            print "error {0}".format(self.last_error)
             return []
 
-        if json.loads(layers_result.text)['schemaVersion'] == 1:
-            layers = json.loads(layers_result.text)['fsLayers']
+        json_result = json.loads(layers_result.text)
+        if json_result['schemaVersion'] == 1:
+            layers = json_result['fsLayers']
         else:
-            layers = json.loads(layers_result.text)['layers']
+            layers = json_result['layers']
 
         return layers
 
-def parse_args():
+def parse_args(args = None):
     parser = argparse.ArgumentParser(
         description="List or delete images from Docker registry",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -290,7 +305,7 @@ for more detail on garbage collection read here:
         const=True)
 
     
-    return parser.parse_args()
+    return parser.parse_args(args)
 
 
 def delete_tags(
@@ -335,7 +350,7 @@ def main_loop(args):
     if args.no_validate_ssl:        
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-    registry = Registry(args.host, args.login, args.no_validate_ssl)
+    registry = Registry.create(args.host, args.login, args.no_validate_ssl)
     if args.delete:
         print "Will delete all but {0} last tags".format(keep_last_versions)
 
