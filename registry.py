@@ -54,15 +54,27 @@ class Registry:
         self.http = None
         self.last_error = None
 
+    def parse_login(self, login):
+        if login != None:
+
+            if not ':' in login:
+                self.last_error = "Please provide -l in the form USER:PASSWORD"
+                return (None, None)
+
+            self.last_error = None
+            return login.split(':', 1)
+
+        return (None, None)
+
+
     @staticmethod
     def create(host, login, no_validate_ssl):
-        r = Registry
-        if login != None:
-            if not ':' in login:
-                r.last_error = "Please provide -l in the form USER:PASSWORD"
-                print(r.last_error)
-                exit(1)
-            (r.username, r.password) = login.split(':')
+        r = Registry()
+
+        (r.username, r.password) = r.parse_login(login)
+        if r.last_error != None:
+            print(r.last_error)
+            exit(1)
 
         r.hostname = host
         r.no_validate_ssl = no_validate_ssl

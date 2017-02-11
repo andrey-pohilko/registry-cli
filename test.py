@@ -19,6 +19,28 @@ class TestRequests:
         self.return_value.status_code = status_code
         self.return_value.text = text
 
+class TestParseLogin(unittest.TestCase):
+
+    def setUp(self):
+        self.registry = Registry()
+
+    def test_login_args_ok(self):
+        (username, password) = self.registry.parse_login("username:password")
+        self.assertEqual(username, "username")
+        self.assertEqual(password, "password")
+        self.assertEqual(self.registry.last_error, None)
+
+    def test_login_args_double_colon(self):
+        (username, password) = self.registry.parse_login("username:pass:word")
+        self.assertEqual(username, "username")
+        self.assertEqual(password, "pass:word")
+        self.assertEqual(self.registry.last_error, None)
+
+    def test_login_args_no_colon(self):
+        (username, password) = self.registry.parse_login("username/password")
+        self.assertEqual(username, None)
+        self.assertEqual(password, None)
+        self.assertEqual(self.registry.last_error, "Please provide -l in the form USER:PASSWORD")
 
 class TestRegistrySend(unittest.TestCase):
 
@@ -52,6 +74,7 @@ class TestRegistrySend(unittest.TestCase):
         self.registry.http.reset_return_value(200)
         response = self.registry.send('/v2/catalog')
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.registry.last_error, None)
         self.registry.http.request.assert_called_with('GET',
                                                  'http://testdomain.com/v2/catalog',
                                                  auth = ("test_login", "test_password"),
@@ -152,6 +175,7 @@ class TestListDigest(unittest.TestCase):
         )
 
         self.assertEqual(response, 'sha256:85295b0e7456a8fbbc886722b483f87f2bff553fa0beeaf37f5d807aff7c1e52')
+        self.assertEqual(self.registry.last_error, None)
 
     def test_invalid_status_code(self):
         self.registry.http.reset_return_value(400)
@@ -194,6 +218,7 @@ class TestListLayers(unittest.TestCase):
         )
 
         self.assertEqual(response, "layers_list")
+        self.assertEqual(self.registry.last_error, None)
 
 
     def test_list_layers_schema_version_1_ok(self):
@@ -218,6 +243,7 @@ class TestListLayers(unittest.TestCase):
         )
 
         self.assertEqual(response, "layers_list")
+        self.assertEqual(self.registry.last_error, None)
 
     def test_list_layers_invalid_status_code(self):
         self.registry.http.reset_return_value(400, "whatever")
