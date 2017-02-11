@@ -36,6 +36,21 @@ Same as above but with layers
   registry.py -l user:pass -r https://example.com:5000 -i ubuntu alpine --layers
 ```
   
+## Username and password
+  
+  It is optional, you can omit it in case if you use insecure registry without authentication (up to you, 
+  but its really insecure; make sure you protect your entire registry from anyone)
+  
+  username and password pair can be provided in the following forms
+```  
+  -l username:password
+  -l 'username':'password'
+  -l "username":"password"
+```
+  Username cannot contain colon (':') (I don't think it will contain ever, but anyway I warned you).
+  Password, in its turn, can contain as many colons as you wish.
+    
+      
 ## Deleting images 
 
 Keep only last 10 versions (useful for CI):
@@ -130,7 +145,7 @@ For tests to work, install `mock` library
   pip install mock
 ```
 
-Running tests is as simple
+Running tests is as simple as
 ```
   python test.py
 ```
