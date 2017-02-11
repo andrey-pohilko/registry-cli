@@ -39,6 +39,19 @@ class Requests:
     def request(self, method, url, **kwargs):
         return requests.request(method, url, **kwargs)
 
+def natural_keys(text):
+    '''
+    alist.sort(key=natural_keys) sorts in human order
+    http://nedbatchelder.com/blog/200712/human_sorting.html
+    (See Toothy's implementation in the comments)
+    '''
+
+    def __atoi(text):
+        return int(text) if text.isdigit() else text
+
+    return [ __atoi(c) for c in re.split('(\d+)', text) ]
+
+
 # class to manipulate registry
 class Registry:
 
@@ -85,18 +98,8 @@ class Registry:
         return r
 
 
-    @staticmethod
-    def __atoi(text):
-        return int(text) if text.isdigit() else text
 
-    @staticmethod
-    def natural_keys(text):
-        '''
-        alist.sort(key=natural_keys) sorts in human order
-        http://nedbatchelder.com/blog/200712/human_sorting.html
-        (See Toothy's implementation in the comments)
-        '''
-        return [ Registry.__atoi(c) for c in re.split('(\d+)', text) ]
+
 
 
     def send(self, path, method="GET"):
@@ -139,7 +142,7 @@ class Registry:
             return []
 
         if tags_list != None:
-            tags_list.sort(key=Registry.natural_keys)
+            tags_list.sort(key=natural_keys)
 
         return tags_list
 
@@ -181,6 +184,7 @@ class Registry:
         print "done"
         return True
 
+    # this function is not used and thus not tested
     def delete_tag_layer(self, image_name, layer_digest, dry_run):
         if dry_run:
             print 'would delete layer {0}'.format(layer_digest)
@@ -433,7 +437,7 @@ def main_loop(args):
             if args.delete_all:
                 tags_list_to_delete = list(tags_list)
             else:
-                tags_list_to_delete = sorted(tags_list, key=Registry.natural_keys)[:-keep_last_versions]
+                tags_list_to_delete = sorted(tags_list, key=natural_keys)[:-keep_last_versions]
 
             delete_tags(
                 registry, image_name, args.dry_run,
