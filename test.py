@@ -42,6 +42,28 @@ class TestParseLogin(unittest.TestCase):
         self.assertEqual(password, None)
         self.assertEqual(self.registry.last_error, "Please provide -l in the form USER:PASSWORD")
 
+    def test_login_args_singlequoted(self):
+        (username, password) = self.registry.parse_login("'username':password")
+        self.assertEqual(username, 'username')
+        self.assertEqual(password, "password")
+        self.assertEqual(self.registry.last_error, None)
+
+    def test_login_args_doublequoted(self):
+        (username, password) = self.registry.parse_login('"username":"password"')
+        self.assertEqual(username, 'username')
+        self.assertEqual(password, "password")
+        self.assertEqual(self.registry.last_error, None)
+
+    def test_login_colon_username(self):
+        """
+        this is to test that if username contains colon,
+        then the result will be invalid in this case
+        and no error will be printed
+        """
+        (username, password) = self.registry.parse_login("'user:name':'pass:word'")
+        self.assertEqual(username, 'user')
+        self.assertEqual(password, "name':'pass:word")
+
 class TestRegistrySend(unittest.TestCase):
 
     def setUp(self):

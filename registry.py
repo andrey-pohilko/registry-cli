@@ -62,7 +62,10 @@ class Registry:
                 return (None, None)
 
             self.last_error = None
-            return login.split(':', 1)
+            (username, password) = login.split(':', 1)
+            username = username.strip('"').strip("'")
+            password = password.strip('"').strip("'")
+            return (username, password)
 
         return (None, None)
 
