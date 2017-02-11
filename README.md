@@ -150,6 +150,13 @@ Running tests is as simple as
   python test.py
 ```
 
+Test will print few error messages, like so
+```
+Testing started at 9:31 AM ...
+  tag digest not found: 400
+error 400
+```
+this is ok, because test simulates invalid inputs also. 
 
 # Contact
 
