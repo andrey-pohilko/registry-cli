@@ -9,7 +9,7 @@ class ReturnValue:
         self.text = text
 
 
-class TestRequests:
+class MockRequests:
 
     def __init__(self, return_value = ReturnValue()):
         self.return_value = return_value
@@ -68,7 +68,7 @@ class TestRegistrySend(unittest.TestCase):
 
     def setUp(self):
         self.registry = Registry()
-        self.registry.http = TestRequests()
+        self.registry.http = MockRequests()
         self.registry.hostname = "http://testdomain.com"
 
     def test_get_ok(self):
@@ -108,7 +108,7 @@ class TestListImages(unittest.TestCase):
 
     def setUp(self):
         self.registry = Registry()
-        self.registry.http = TestRequests()
+        self.registry.http = MockRequests()
         self.registry.hostname = "http://testdomain.com"
 
     def test_list_images_ok(self):
@@ -128,7 +128,7 @@ class TestListImages(unittest.TestCase):
 class TestListTags(unittest.TestCase):
     def setUp(self):
         self.registry = Registry()
-        self.registry.http = TestRequests()
+        self.registry.http = MockRequests()
         self.registry.hostname = "http://testdomain.com"
         self.registry.http.reset_return_value(200)
 
@@ -169,7 +169,7 @@ class TestListTags(unittest.TestCase):
 class TestListDigest(unittest.TestCase):
     def setUp(self):
         self.registry = Registry()
-        self.registry.http = TestRequests()
+        self.registry.http = MockRequests()
         self.registry.hostname = "http://testdomain.com"
         self.registry.http.reset_return_value(200)
 
@@ -214,7 +214,7 @@ class TestListDigest(unittest.TestCase):
 class TestListLayers(unittest.TestCase):
     def setUp(self):
         self.registry = Registry()
-        self.registry.http = TestRequests()
+        self.registry.http = MockRequests()
         self.registry.hostname = "http://testdomain.com"
         self.registry.http.reset_return_value(200)
 
@@ -282,6 +282,50 @@ class TestListLayers(unittest.TestCase):
 
         self.assertEqual(response, [])
         self.assertEqual(self.registry.last_error, 400)
+
+class TestDeletion(unittest.TestCase):
+    def setUp(self):
+        self.registry = Registry()
+        self.registry.http = MockRequests()
+        self.registry.hostname = "http://testdomain.com"
+        self.registry.http.reset_return_value(200, "MOCK_DIGEST")
+        self.registry.http.return_value.headers = {
+            'Content-Length': '4935',
+            'Docker-Content-Digest': 'MOCK_DIGEST_HEADER',
+            'X-Content-Type-Options': 'nosniff'
+        }
+
+
+    def test_delete_tag_dry_run(self):
+        response = self.registry.delete_tag("image1", 'test_tag', True, [])
+        self.assertFalse(response)
+
+    def test_delete_tag_ok(self):
+        keep_tag_digests = ['DIGEST1', 'DIGEST2']
+        response = self.registry.delete_tag('image1', 'test_tag', False, keep_tag_digests)
+        self.assertEqual(response, True)
+        self.assertEqual(self.registry.http.request.call_count, 2)
+        self.registry.http.request.assert_called_with(
+            "DELETE",
+            "http://testdomain.com/v2/image1/manifests/MOCK_DIGEST_HEADER",
+            auth=(None, None),
+            headers=self.registry.HEADERS,
+            verify=True
+        )
+        self.assertTrue("MOCK_DIGEST_HEADER" in keep_tag_digests)
+
+    def test_delete_tag_ignored(self):
+        response = self.registry.delete_tag('image1', 'test_tag', False, ['MOCK_DIGEST_HEADER'])
+        self.assertEqual(response, True)
+        self.assertEqual(self.registry.http.request.call_count, 1)
+        self.registry.http.request.assert_called_with(
+            "HEAD",
+            "http://testdomain.com/v2/image1/manifests/test_tag",
+            auth=(None, None),
+            headers=self.registry.HEADERS,
+            verify=True
+        )
+
 
 
 if __name__ == '__main__':
