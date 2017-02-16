@@ -1,6 +1,7 @@
 import unittest
-from registry import Registry
+from registry import Registry, Requests
 from mock import MagicMock
+import requests
 
 
 class ReturnValue:
@@ -18,6 +19,27 @@ class MockRequests:
     def reset_return_value(self, status_code = 200, text = ""):
         self.return_value.status_code = status_code
         self.return_value.text = text
+
+class TestCreateMethod(unittest.TestCase):
+    def test_create_nologin(self):
+        r = Registry.create("testhost", None, False)
+        self.assertTrue(isinstance(r.http, Requests))
+        self.assertEqual(r.hostname, "testhost")
+        self.assertEqual(r.no_validate_ssl, False)
+
+    def test_create_login(self):
+        r = Registry.create("testhost2", "testlogin:testpass", False)
+        self.assertEqual(r.hostname, "testhost2")
+        self.assertTrue(isinstance(r.http, Requests))
+        self.assertEqual(r.username, "testlogin")
+        self.assertEqual(r.password, "testpass")
+
+    def test_validate_ssl(self):
+        r = Registry.create("testhost3", None, True)
+        self.assertTrue(isinstance(r.http, Requests))
+        self.assertTrue(r.no_validate_ssl)
+        self.assertEqual(r.username, None)
+        self.assertEqual(r.password, None)
 
 class TestParseLogin(unittest.TestCase):
 
