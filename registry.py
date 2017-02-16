@@ -94,7 +94,7 @@ class Registry:
 
         r.hostname = host
         r.no_validate_ssl = no_validate_ssl
-        r.http = Requests
+        r.http = Requests()
         return r
 
 
