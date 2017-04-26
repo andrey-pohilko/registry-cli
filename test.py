@@ -21,6 +21,15 @@ class MockRequests:
         self.return_value.text = text
 
 
+class TestRequestsClass(unittest.TestCase):
+    def test_requests_created(self):
+        # simply create requests class and make sure it raises an exception
+        # from requests module
+        # this test will fail if port 45272 is open on local machine
+        # is so, either change port below or check what is this service you are
+        # running on port 45272
+        with self.assertRaises(requests.exceptions.ConnectionError):
+            Requests().request("GET", "http://localhost:45272")
 
 
 class TestCreateMethod(unittest.TestCase):
@@ -196,6 +205,10 @@ class TestListTags(unittest.TestCase):
         self.assertEqual(get_tags(tags_list, "", set()),
                          set(['FINAL_0.1', 'SNAPSHOT_0.1', "0.1.SNAP", "1.0.0_FINAL"]))
         self.assertEqual(get_tags(tags_list, "", set(["ABSENT"])), set())
+
+        self.assertEqual(get_tags(tags_list, "IMAGE:TAG00", ""), set(["TAG00"]))
+        self.assertEqual(get_tags(tags_list, "IMAGE:TAG00", set(["WILL_NOT_BE_CONSIDERED"])), set(["TAG00"]))
+
 
 
 
