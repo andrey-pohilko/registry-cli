@@ -1,5 +1,5 @@
 import unittest
-from registry import Registry, Requests
+from registry import Registry, Requests, get_tags
 from mock import MagicMock
 import requests
 
@@ -19,6 +19,9 @@ class MockRequests:
     def reset_return_value(self, status_code = 200, text = ""):
         self.return_value.status_code = status_code
         self.return_value.text = text
+
+
+
 
 class TestCreateMethod(unittest.TestCase):
     def test_create_nologin(self):
@@ -178,14 +181,23 @@ class TestListTags(unittest.TestCase):
         self.assertEqual(response, [])
         self.assertEqual(self.registry.last_error, "list_tags: invalid json response")
 
-    def test_list_tags_ok_sorted(self):
-        def test_list_one_tag_ok(self):
-            self.registry.http.reset_return_value(status_code=200,
-                    text=u'{"name":"image1","tags":["0.1.306", "0.1.300", "0.1.290"]}')
+    def test_list_one_tag_sorted(self):
+        self.registry.http.reset_return_value(status_code=200,
+                text=u'{"name":"image1","tags":["0.1.306", "0.1.300", "0.1.290"]}')
 
-            response = self.registry.list_tags('image1')
-            self.assertEqual(response, ["0.1.290", "0.1.300", "0.1.306"])
-            self.assertEqual(self.registry.last_error, None)
+        response = self.registry.list_tags('image1')
+        self.assertEqual(response, ["0.1.290", "0.1.300", "0.1.306"])
+        self.assertEqual(self.registry.last_error, None)
+
+    def test_list_tags_like_various(self):
+        tags_list = set(['FINAL_0.1', 'SNAPSHOT_0.1', "0.1.SNAP", "1.0.0_FINAL"])
+        self.assertEqual(get_tags(tags_list, "", set(["FINAL"])), set(["FINAL_0.1", "1.0.0_FINAL"]))
+        self.assertEqual(get_tags(tags_list, "", set(["SNAPSHOT"])), set(['SNAPSHOT_0.1']))
+        self.assertEqual(get_tags(tags_list, "", set()),
+                         set(['FINAL_0.1', 'SNAPSHOT_0.1', "0.1.SNAP", "1.0.0_FINAL"]))
+        self.assertEqual(get_tags(tags_list, "", set(["ABSENT"])), set())
+
+
 
 
 class TestListDigest(unittest.TestCase):

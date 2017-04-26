@@ -146,6 +146,13 @@ class Registry:
 
         return tags_list
 
+    def list_tags_like(self, tag_like, args_tags_like):
+        for tag_like in args_tags_like:
+            print "tag like: {0}".format(tag_like)
+            for tag in all_tags_list:
+                if re.search(tag_like, tag):
+                    print "Adding {0} to tags list".format(tag)
+
     def get_tag_digest(self, image_name, tag):
         image_headers = self.send("/v2/{0}/manifests/{1}".format(
             image_name, tag), method="HEAD")
@@ -361,6 +368,30 @@ def delete_tags(
 
         registry.delete_tag(image_name, tag, dry_run, keep_tag_digests)
 
+def get_tags_like(args_tags_like, tags_list):
+    result = set()
+    for tag_like in args_tags_like:
+        print "tag like: {0}".format(tag_like)
+        for tag in tags_list:
+            if re.search(tag_like, tag):
+                print "Adding {0} to tags list".format(tag)
+                result.add(tag)
+    return result
+
+def get_tags(all_tags_list, image_name, tags_like):
+    # check if there are args for special tags
+    result = set()
+    if tags_like:
+        result = get_tags_like(tags_like, all_tags_list)
+    else:
+        result.update(all_tags_list)
+
+    # get tags from image name if any
+    if ":" in image_name:
+        (image_name, tag_name) = image_name.split(":")
+        result = set(tag_name)
+
+    return result
 
 def main_loop(args):
 
@@ -384,29 +415,13 @@ def main_loop(args):
         print "---------------------------------"
         print "Image: {0}".format(image_name)
 
-        tags_list = set()
         all_tags_list = registry.list_tags(image_name)
 
         if not all_tags_list:
                 print "  no tags!"
                 continue
 
-        if args.tags_like:
-            for tag_like in args.tags_like:
-                print "tag like: {0}".format(tag_like)
-                for tag in all_tags_list:   
-                    if re.search(tag_like, tag):
-                        print "Adding {0} to tags list".format(tag)
-                        tags_list.add(tag)
-
-        # get tags from arguments if any
-        if ":" in image_name:
-            (image_name, tag_name) = image_name.split(":")
-            tags_list.add(tag_name)
-
-
-        if len(tags_list) == 0:
-            tags_list.update(all_tags_list)
+        tags_list = get_tags(all_tags_list, image_name, args.tags_like)
 
         # print tags and optionally layers        
         for tag in tags_list:
@@ -422,14 +437,7 @@ def main_loop(args):
 
         # add tags to "tags_to_keep" list, if we have regexp "tags_to_keep" entries:
         if args.keep_tags_like:
-            for keep_like in args.keep_tags_like:
-                print "keep tag like: {0}".format(keep_like)
-                for tag in tags_list:
-                    if re.search(keep_like, tag):
-                        print "Adding {0} to keep tags list".format(tag)
-                        args.keep_tags.append(tag)
-
-
+            args.keep_tags.append(get_tags_like(args.keep_tags_like, tags_list))
 
 
         # delete tags if told so
