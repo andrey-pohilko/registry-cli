@@ -97,7 +97,7 @@ Delete all tags for all images (do you really want to do it?):
 
 If you are using docker registry with a self signed ssl certificate, you can disable ssl verification:
 ```
-  registry.py -l user:pass -r --no-validate-ssl https://example.com:5000
+  registry.py -l user:pass -r https://example.com:5000 --no-validate-ssl 
 ```
 
   

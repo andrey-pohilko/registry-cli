@@ -98,10 +98,6 @@ class Registry:
         return r
 
 
-
-
-
-
     def send(self, path, method="GET"):
         # try:
         result = self.http.request(
@@ -192,22 +188,22 @@ class Registry:
         return True
 
     # this function is not used and thus not tested
-    def delete_tag_layer(self, image_name, layer_digest, dry_run):
-        if dry_run:
-            print('would delete layer {0}'.format(layer_digest))
-            return False
-        
-        print('deleting layer {0}'.format(layer_digest),)
-
-        delete_result = self.send('/v2/{0}/blobs/{1}'.format(
-            image_name, layer_digest), method='DELETE')
-
-        if delete_result == None:
-            print("failed, error: {0}".format(self.last_error))
-            return False
-
-        print("done")
-        return True
+    # def delete_tag_layer(self, image_name, layer_digest, dry_run):
+    #     if dry_run:
+    #         print('would delete layer {0}'.format(layer_digest))
+    #         return False
+    #
+    #     print('deleting layer {0}'.format(layer_digest),)
+    #
+    #     delete_result = self.send('/v2/{0}/blobs/{1}'.format(
+    #         image_name, layer_digest), method='DELETE')
+    #
+    #     if delete_result == None:
+    #         print("failed, error: {0}".format(self.last_error))
+    #         return False
+    #
+    #     print("done")
+    #     return True
 
 
     def list_tag_layers(self, image_name, tag):

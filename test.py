@@ -1,5 +1,5 @@
 import unittest
-from registry import Registry, Requests, get_tags
+from registry import Registry, Requests, get_tags, parse_args, delete_tags
 from mock import MagicMock
 import requests
 
@@ -53,6 +53,10 @@ class TestCreateMethod(unittest.TestCase):
         self.assertEqual(r.username, None)
         self.assertEqual(r.password, None)
 
+    def test_invalid_login(self):
+        with self.assertRaises(SystemExit):
+            Registry.create("testhost4", "invalid_login", False)
+
 class TestParseLogin(unittest.TestCase):
 
     def setUp(self):
@@ -70,6 +74,7 @@ class TestParseLogin(unittest.TestCase):
         self.assertEqual(password, "pass:word")
         self.assertEqual(self.registry.last_error, None)
 
+    # this test becomes reduntant
     def test_login_args_no_colon(self):
         (username, password) = self.registry.parse_login("username/password")
         self.assertEqual(username, None)
@@ -373,6 +378,73 @@ class TestDeletion(unittest.TestCase):
             verify=True
         )
 
+    def test_delete_tag_no_digest(self):
+        self.registry.http.reset_return_value(400, "")
+        response = self.registry.delete_tag('image1', 'test_tag', False, [])
+        self.assertFalse(response)
+        self.assertEqual(self.registry.last_error, 400)
+
+class TestDeleteTagsFunction(unittest.TestCase):
+    def setUp(self):
+        self.registry = Registry()
+        self.delete_mock = MagicMock()
+        self.registry.delete_tag = self.delete_mock
+        self.registry.http = MockRequests()
+        self.registry.hostname = "http://testdomain.com"
+        self.registry.http.reset_return_value(200, "MOCK_DIGEST")
+        self.registry.http.return_value.headers = {
+            'Content-Length': '4935',
+            'Docker-Content-Digest': 'MOCK_DIGEST_HEADER',
+            'X-Content-Type-Options': 'nosniff'
+        }
+
+    def test_delete_tags_no_keep(self):
+        delete_tags(self.registry, "imagename", False, ["tag_to_delete"], [])
+        self.delete_mock.assert_called_with(
+            "imagename",
+            "tag_to_delete",
+            False,
+            []
+        )
+
+    def test_delete_tags_keep(self):
+        delete_tags(self.registry, "imagename", False, ["tag1", "tag2"], ["tag_to_keep"])
+        self.delete_mock.assert_called_with(
+            "imagename",
+            "tag2",
+            False,
+            ['MOCK_DIGEST_HEADER']
+        )
+
+class TestArgParser(unittest.TestCase):
+    def test_no_args(self):
+        with self.assertRaises(SystemExit):
+            parse_args("")
+
+    def test_all_args(self):
+        args_list = ["-r", "hostname",
+                     "-l", "loginstring",
+                     "-d",
+                     "-n", "15",
+                     "--dry-run",
+                     "-i", "imagename1", "imagename2",
+                     "--keep-tags", "keep1", "keep2",
+                     "--tags-like", "tags_like_text",
+                     "--no-validate-ssl",
+                     "--delete-all",
+                     "--layers"]
+        args = parse_args(args_list)
+        self.assertTrue(args.delete)
+        self.assertTrue(args.layers)
+        self.assertTrue(args.no_validate_ssl)
+        self.assertTrue(args.delete_all)
+        self.assertTrue(args.layers)
+        self.assertEqual(args.image, ["imagename1", "imagename2"])
+        self.assertEqual(args.num, "15")
+        self.assertEqual(args.login, "loginstring")
+        self.assertEqual(args.tags_like, ["tags_like_text"])
+        self.assertEqual(args.host, "hostname")
+        self.assertEqual(args.keep_tags, ["keep1", "keep2"])
 
 
 if __name__ == '__main__':
