@@ -424,7 +424,7 @@ def main_loop(args):
             print("  tag: {0}".format(tag))
             if args.layers:
                 for layer in registry.list_tag_layers(image_name, tag):
-                    if layer.has_key('size'):
+                    if 'size' in layer:
                         print("    layer: {0}, size: {1}".format(
                             layer['digest'], layer['size']))
                     else:
