@@ -1,3 +1,11 @@
 dependencies:
   pre:
     - pip install -r requirements.txt
+
+test:
+  override:
+    - coverage run test.py
+  post:
+    - mkdir -p $CIRCLE_ARTIFACTS/coverage-html
+    - coverage html -d $CIRCLE_ARTIFACTS/coverage-html
+    - mv .coverage $CIRCLE_ARTIFACTS
