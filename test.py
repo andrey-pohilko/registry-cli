@@ -408,13 +408,34 @@ class TestDeleteTagsFunction(unittest.TestCase):
         )
 
     def test_delete_tags_keep(self):
-        delete_tags(self.registry, "imagename", False, ["tag1", "tag2"], ["tag_to_keep"])
+        digest_mock = MagicMock(return_value = "DIGEST_MOCK")
+        self.registry.get_tag_digest = digest_mock
+
+        delete_tags(self.registry, "imagename", False, ["tag1", "tag2"], ["tag2"])
+
+        digest_mock.assert_called_with("imagename", "tag2")
+
         self.delete_mock.assert_called_with(
             "imagename",
-            "tag2",
+            "tag1",
             False,
-            ['MOCK_DIGEST_HEADER']
+            ['DIGEST_MOCK']
         )
+
+    def test_delete_tags_digest_none(self):
+        digest_mock = MagicMock(return_value = None)
+        self.registry.get_tag_digest = digest_mock
+        delete_tags(self.registry, "imagename", False, ["tag1", "tag2"], ["tag2"])
+
+        digest_mock.assert_called_with("imagename", "tag2")
+
+        self.delete_mock.assert_called_with(
+            "imagename",
+            "tag1",
+            False,
+            []
+        )
+
 
 class TestArgParser(unittest.TestCase):
     def test_no_args(self):
