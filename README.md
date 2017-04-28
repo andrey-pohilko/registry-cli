@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/andrey-pohilko/registry-cli/tree/master.svg?style=svg&circle-token=5216bf89763aec24bbcd6d15494ea32ffc53d66d)](https://circleci.com/gh/andrey-pohilko/registry-cli/tree/master)  [![shields.io](https://img.shields.io/badge/coverage-80%25-green.svg)](https://shields.io)
+[![CircleCI](https://circleci.com/gh/andrey-pohilko/registry-cli/tree/master.svg?style=svg&circle-token=5216bf89763aec24bbcd6d15494ea32ffc53d66d)](https://circleci.com/gh/andrey-pohilko/registry-cli/tree/master)  
 
 # registry-cli
 registry.py is a script for easy manipulation of docker-registry from command line (and from scripts)
