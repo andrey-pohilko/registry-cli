@@ -4,8 +4,8 @@ dependencies:
 
 test:
   override:
-    - coverage run test.py
+    - coverage run --include=test.py,registry.py test.py
   post:
-    - mkdir -p $CIRCLE_ARTIFACTS/coverage-html
-    - coverage html -d $CIRCLE_ARTIFACTS/coverage-html
+    - mkdir -p $CIRCLE_ARTIFACTS/coverage
+    - coverage html -d $CIRCLE_ARTIFACTS/coverage
     - mv .coverage $CIRCLE_ARTIFACTS
