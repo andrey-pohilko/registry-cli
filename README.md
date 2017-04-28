@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/andrey-pohilko/registry-cli/tree/master.svg?style=svg&circle-token=5216bf89763aec24bbcd6d15494ea32ffc53d66d)](https://circleci.com/gh/andrey-pohilko/registry-cli/tree/master)
+
 # registry-cli
 registry.py is a script for easy manipulation of docker-registry from command line (and from scripts)
 
