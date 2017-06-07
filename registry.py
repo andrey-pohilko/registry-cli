@@ -443,6 +443,12 @@ def main_loop(args):
             else:
                 tags_list_to_delete = sorted(tags_list, key=natural_keys)[:-keep_last_versions]
 
+                # A manifest might be shared between different tags. Explicitly add those
+                # tags that we want to preserve to the keep_tags list, to prevent
+                # any manifest they are using from being deleted.
+                tags_list_to_keep = [tag for tag in tags_list if tag not in tags_list_to_delete]
+                args.keep_tags.extend(tags_list_to_keep)
+
             delete_tags(
                 registry, image_name, args.dry_run,
                 tags_list_to_delete, args.keep_tags)
