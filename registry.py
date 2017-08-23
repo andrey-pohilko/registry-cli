@@ -432,8 +432,9 @@ def main_loop(args):
                             layer['blobSum']))
 
         # add tags to "tags_to_keep" list, if we have regexp "tags_to_keep" entries:
+        keep_tags=[]
         if args.keep_tags_like:
-            args.keep_tags.append(get_tags_like(args.keep_tags_like, tags_list))
+            keep_tags.append(get_tags_like(args.keep_tags_like, tags_list))
 
 
         # delete tags if told so
@@ -447,11 +448,11 @@ def main_loop(args):
                 # tags that we want to preserve to the keep_tags list, to prevent
                 # any manifest they are using from being deleted.
                 tags_list_to_keep = [tag for tag in tags_list if tag not in tags_list_to_delete]
-                args.keep_tags.extend(tags_list_to_keep)
+                keep_tags.extend(tags_list_to_keep)
 
             delete_tags(
                 registry, image_name, args.dry_run,
-                tags_list_to_delete, args.keep_tags)
+                tags_list_to_delete, keep_tags)
 
 if __name__ == "__main__":
     args = parse_args()
