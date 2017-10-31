@@ -6,6 +6,29 @@ registry.py is a script for easy manipulation of docker-registry from command li
 
 ## Installation
 
+### Docker image
+
+You can download ready-made docker image with the script and all python dependencies pre-installed:
+
+```
+    docker pull anoxis/registry-cli
+```
+
+In this case, in the command line replace 
+```
+    registry.py
+```
+   with  
+```
+   docker run --rm anoxis/registry-cli 
+```
+in all commands below, e.g. 
+```
+    docker run --rm anoxis/registry-cli -r http://example.com:5000
+```
+
+### python script
+
 Download registry.py and set it as executable
 ```
   chmod 755 registry.py
@@ -15,7 +38,6 @@ It uses requests python module, so you may need to install it as well:
 ```
   pip install requests
 ```
-
 ## Listing images
 
 The below command will list all images and all tags in your registry:
