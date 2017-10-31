@@ -14,7 +14,7 @@ You can download ready-made docker image with the script and all python dependen
     docker pull anoxis/registry-cli
 ```
 
-In this case, in the command line replace 
+In this case, in replace 
 ```
     registry.py
 ```
@@ -27,6 +27,12 @@ in all commands below, e.g.
     docker run --rm anoxis/registry-cli -r http://example.com:5000
 ```
 
+Note: when you use the docker image and registry on the same computer (registry is on localhost), then due to internal network created by docker you have to link to the registry's network and refer registry container by its name, not localhost.
+E.g. your registry container is named "registry",
+then the command to launch registry-cli would be
+```bash
+    docker run --rm --link registry anoxis/registry-cli -r http://registry:5000
+```
 ### python script
 
 Download registry.py and set it as executable
@@ -34,10 +40,11 @@ Download registry.py and set it as executable
   chmod 755 registry.py
 ```
 
-It uses requests python module, so you may need to install it as well:
+Install dependencies:
 ```
-  pip install requests
+  sudo pip install -r requirements.txt
 ```
+
 ## Listing images
 
 The below command will list all images and all tags in your registry:
@@ -156,7 +163,7 @@ or adding relevant configuration option to the docker-registry's config.yml.
 For more on docker-registry configuration, read here:
   https://docs.docker.com/registry/configuration/
 
-You may get `Functionality not supported` error when this option is not enabled.
+You may get `Error 405` message from script (`Functionality not supported`) when this option is not enabled. 
 
 
 ## Contribution
