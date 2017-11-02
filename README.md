@@ -173,7 +173,7 @@ do not break existing functionality.
 
 For tests to work, install `mock` library
 ```
-  pip install mock
+  pip install -r requirements-test.txt
 ```
 
 Running tests is as simple as
