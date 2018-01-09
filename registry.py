@@ -6,38 +6,43 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import json
 import re
 import argparse
+from datetime import timedelta, datetime as dt
 
-## this is a registry manipulator, can do following:
-##   - list all images (including layers)
-##   - delete images
-##       - all except last N images
-##       - all images and/or tags
-##
-## run
-##   registry.py -h
-##   to get more help
-##
-## important: after removing the tags, run the garbage collector
-## on your registry host:
-## docker-compose -f [path_to_your_docker_compose_file] run \
-##     registry bin/registry garbage-collect \
-##     /etc/docker/registry/config.yml
-##
-## or if you are not using docker-compose:
-## docker run registry:2 bin/registry garbage-collect \
-##     /etc/docker/registry/config.yml
-##
-## for more detail on garbage collection read here:
-## https://docs.docker.com/registry/garbage-collection/
+# this is a registry manipulator, can do following:
+# - list all images (including layers)
+# - delete images
+# - all except last N images
+# - all images and/or tags
+#
+# run
+# registry.py -h
+# to get more help
+#
+# important: after removing the tags, run the garbage collector
+# on your registry host:
+# docker-compose -f [path_to_your_docker_compose_file] run \
+# registry bin/registry garbage-collect \
+# /etc/docker/registry/config.yml
+#
+# or if you are not using docker-compose:
+# docker run registry:2 bin/registry garbage-collect \
+# /etc/docker/registry/config.yml
+#
+# for more detail on garbage collection read here:
+# https://docs.docker.com/registry/garbage-collection/
 
 
 # number of image versions to keep
 CONST_KEEP_LAST_VERSIONS = 10
 
 # this class is created for testing
+
+
 class Requests:
+
     def request(self, method, url, **kwargs):
         return requests.request(method, url, **kwargs)
+
 
 def natural_keys(text):
     '''
@@ -49,7 +54,7 @@ def natural_keys(text):
     def __atoi(text):
         return int(text) if text.isdigit() else text
 
-    return [ __atoi(c) for c in re.split('(\d+)', text) ]
+    return [__atoi(c) for c in re.split('(\d+)', text)]
 
 
 # class to manipulate registry
@@ -82,7 +87,6 @@ class Registry:
 
         return (None, None)
 
-
     @staticmethod
     def create(host, login, no_validate_ssl):
         r = Registry()
@@ -97,15 +101,14 @@ class Registry:
         r.http = Requests()
         return r
 
-
     def send(self, path, method="GET"):
         # try:
         result = self.http.request(
             method, "{0}{1}".format(self.hostname, path),
-            headers = self.HEADERS,
+            headers=self.HEADERS,
             auth=(None if self.username == ""
                   else (self.username, self.password)),
-            verify = not self.no_validate_ssl)
+            verify=not self.no_validate_ssl)
 
         # except Exception as error:
         #     print("cannot connect to {0}\nerror {1}".format(
@@ -116,11 +119,11 @@ class Registry:
             self.last_error = None
             return result
 
-        self.last_error=result.status_code
+        self.last_error = result.status_code
         return None
 
     def list_images(self):
-        result = self.send('/v2/_catalog')
+        result = self.send('/v2/_catalog?n=10000')
         if result == None:
             return []
 
@@ -169,7 +172,8 @@ class Registry:
         tag_digest = self.get_tag_digest(image_name, tag)
 
         if tag_digest in tag_digests_to_ignore:
-            print("Digest {0} for tag {1} is referenced by another tag or has already been deleted and will be ignored".format(tag_digest, tag))
+            print("Digest {0} for tag {1} is referenced by another tag or has already been deleted and will be ignored".format(
+                tag_digest, tag))
             return True
 
         if tag_digest == None:
@@ -205,7 +209,6 @@ class Registry:
     #     print("done")
     #     return True
 
-
     def list_tag_layers(self, image_name, tag):
         layers_result = self.send("/v2/{0}/manifests/{1}".format(
             image_name, tag))
@@ -222,7 +225,45 @@ class Registry:
 
         return layers
 
-def parse_args(args = None):
+    def get_tag_config(self, image_name, tag):
+        config_result = self.send(
+            "/v2/{0}/manifests/{1}".format(image_name, tag))
+
+        if config_result == None:
+            print("  tag digest not found: {0}".format(self.last_error))
+            return []
+
+        json_result = json.loads(config_result.text)
+        if json_result['schemaVersion'] == 1:
+            print("Docker schemaVersion 1 isn't supported for deleting by age now")
+            exit(1)
+        else:
+            tag_config = json_result['config']
+
+        return tag_config
+
+    def get_image_age(self, image_name, image_config):
+        container_header = {"Accept": "{0}".format(
+            image_config['mediaType'])}
+
+        response = self.http.request("GET", "{0}{1}".format(self.hostname, "/v2/{0}/blobs/{1}".format(
+            image_name, image_config['digest'])),
+            headers=container_header,
+            auth=(None if self.username == ""
+                  else (self.username, self.password)),
+            verify=not self.no_validate_ssl)
+
+        if str(response.status_code)[0] == '2':
+            self.last_error = None
+            image_age = json.loads(response.text)
+            return image_age['created']
+        else:
+            print(" blob not found: {0}".format(self.last_error))
+            self.last_error = response.status_code
+            return []
+
+
+def parse_args(args=None):
     parser = argparse.ArgumentParser(
         description="List or delete images from Docker registry",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -243,19 +284,19 @@ for more detail on garbage collection read here:
    https://docs.docker.com/registry/garbage-collection/
                 """))
     parser.add_argument(
-        '-l','--login',
+        '-l', '--login',
         help="Login and password to access to docker registry",
         required=False,
         metavar="USER:PASSWORD")
 
     parser.add_argument(
-        '-r','--host',
+        '-r', '--host',
         help="Hostname for registry server, e.g. https://example.com:5000",
         required=True,
         metavar="URL")
 
     parser.add_argument(
-        '-d','--delete',
+        '-d', '--delete',
         help=('If specified, delete all but last {0} tags '
               'of all images').format(CONST_KEEP_LAST_VERSIONS),
         action='store_const',
@@ -263,7 +304,7 @@ for more detail on garbage collection read here:
         const=True)
 
     parser.add_argument(
-        '-n','--num',
+        '-n', '--num',
         help=('Set the number of tags to keep'
               '({0} if not set)').format(CONST_KEEP_LAST_VERSIONS),
         default=CONST_KEEP_LAST_VERSIONS,
@@ -279,10 +320,10 @@ for more detail on garbage collection read here:
         const=True)
 
     parser.add_argument(
-        '-i','--image',
+        '-i', '--image',
         help='Specify images and tags to list/delete',
         nargs='+',
-        metavar="IMAGE:[TAG]")    
+        metavar="IMAGE:[TAG]")
 
     parser.add_argument(
         '--keep-tags',
@@ -307,7 +348,7 @@ for more detail on garbage collection read here:
 
     parser.add_argument(
         '--no-validate-ssl',
-        help="Disable ssl validation",        
+        help="Disable ssl validation",
         action='store_const',
         default=False,
         const=True)
@@ -326,12 +367,18 @@ for more detail on garbage collection read here:
         default=False,
         const=True)
 
-    
+    parser.add_argument(
+        '--delete-by-hours',
+        help=('Will delete all tags that older than specified hours. Be careful!'),
+        default=False,
+        nargs='?',
+        metavar='Hours')
+
     return parser.parse_args(args)
 
 
 def delete_tags(
-    registry, image_name, dry_run, tags_to_delete, tags_to_keep):
+        registry, image_name, dry_run, tags_to_delete, tags_to_keep):
 
     keep_tag_digests = []
 
@@ -341,8 +388,9 @@ def delete_tags(
 
             print("Getting digest for tag {0}".format(tag))
             digest = registry.get_tag_digest(image_name, tag)
-            if digest is None:            
-                print("Tag {0} does not exist for image {1}. Ignore here.".format(tag, image_name))
+            if digest is None:
+                print("Tag {0} does not exist for image {1}. Ignore here.".format(
+                    tag, image_name))
                 continue
 
             print("Keep digest {0} for tag {1}".format(digest, tag))
@@ -355,14 +403,15 @@ def delete_tags(
 
         print("  deleting tag {0}".format(tag))
 
-##        deleting layers is disabled because 
-##        it also deletes shared layers
-##        
-##        for layer in registry.list_tag_layers(image_name, tag):
-##            layer_digest = layer['digest']
-##            registry.delete_tag_layer(image_name, layer_digest, dry_run)
+# deleting layers is disabled because
+# it also deletes shared layers
+##
+# for layer in registry.list_tag_layers(image_name, tag):
+# layer_digest = layer['digest']
+# registry.delete_tag_layer(image_name, layer_digest, dry_run)
 
         registry.delete_tag(image_name, tag, dry_run, keep_tag_digests)
+
 
 def get_tags_like(args_tags_like, tags_list):
     result = set()
@@ -373,6 +422,7 @@ def get_tags_like(args_tags_like, tags_list):
                 print("Adding {0} to tags list".format(tag))
                 result.add(tag)
     return result
+
 
 def get_tags(all_tags_list, image_name, tags_like):
     # check if there are args for special tags
@@ -389,11 +439,38 @@ def get_tags(all_tags_list, image_name, tags_like):
 
     return result
 
+
+def delete_tags_by_age(registry, image_name, dry_run, hours, tags_to_keep):
+    image_tags = registry.list_tags(image_name)
+    tags_to_delete = []
+    print('---------------------------------')
+    for tag in image_tags:
+        image_config = registry.get_tag_config(image_name, tag)
+
+        if image_config == []:
+            print("tag not found")
+            continue
+
+        image_age = registry.get_image_age(image_name, image_config)
+
+        if image_age == []:
+            print("timestamp not found")
+            continue
+
+        if dt.strptime(image_age[:-4], "%Y-%m-%dT%H:%M:%S.%f") < dt.now() - timedelta(hours=int(hours)):
+            print("will be deleted tag: {0} timestamp: {1}".format(
+                tag, image_age))
+            tags_to_delete.append(tag)
+
+    print('------------deleting-------------')
+    delete_tags(registry, image_name, dry_run, tags_to_delete, tags_to_keep)
+
+
 def main_loop(args):
 
     keep_last_versions = int(args.num)
 
-    if args.no_validate_ssl:        
+    if args.no_validate_ssl:
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
     registry = Registry.create(args.host, args.login, args.no_validate_ssl)
@@ -414,12 +491,12 @@ def main_loop(args):
         all_tags_list = registry.list_tags(image_name)
 
         if not all_tags_list:
-                print("  no tags!")
-                continue
+            print("  no tags!")
+            continue
 
         tags_list = get_tags(all_tags_list, image_name, args.tags_like)
 
-        # print(tags and optionally layers        
+        # print(tags and optionally layers
         for tag in tags_list:
             print("  tag: {0}".format(tag))
             if args.layers:
@@ -431,28 +508,36 @@ def main_loop(args):
                         print("    layer: {0}".format(
                             layer['blobSum']))
 
-        # add tags to "tags_to_keep" list, if we have regexp "tags_to_keep" entries:
-        keep_tags=[]
+        # add tags to "tags_to_keep" list, if we have regexp "tags_to_keep"
+        # entries:
+        keep_tags = []
         if args.keep_tags_like:
-            keep_tags.append(get_tags_like(args.keep_tags_like, tags_list))
-
+            keep_tags.extend(get_tags_like(args.keep_tags_like, tags_list))
 
         # delete tags if told so
         if args.delete or args.delete_all:
             if args.delete_all:
                 tags_list_to_delete = list(tags_list)
             else:
-                tags_list_to_delete = sorted(tags_list, key=natural_keys)[:-keep_last_versions]
+                tags_list_to_delete = sorted(tags_list, key=natural_keys)[
+                    :-keep_last_versions]
 
                 # A manifest might be shared between different tags. Explicitly add those
                 # tags that we want to preserve to the keep_tags list, to prevent
                 # any manifest they are using from being deleted.
-                tags_list_to_keep = [tag for tag in tags_list if tag not in tags_list_to_delete]
+                tags_list_to_keep = [
+                    tag for tag in tags_list if tag not in tags_list_to_delete]
                 keep_tags.extend(tags_list_to_keep)
 
             delete_tags(
                 registry, image_name, args.dry_run,
                 tags_list_to_delete, keep_tags)
+
+        # delete tags by age in hours
+        if args.delete_by_hours:
+            keep_tags.extend(args.keep_tags)
+            delete_tags_by_age(registry, image_name, args.dry_run,
+                               args.delete_by_hours, keep_tags)
 
 if __name__ == "__main__":
     args = parse_args()
@@ -461,4 +546,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("Ctrl-C pressed, quitting")
         exit(1)
-
