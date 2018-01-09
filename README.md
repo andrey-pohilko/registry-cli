@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/andrey-pohilko/registry-cli/tree/master.svg?style=svg&circle-token=5216bf89763aec24bbcd6d15494ea32ffc53d66d)](https://circleci.com/gh/andrey-pohilko/registry-cli/tree/master)  
+[![CircleCI](https://circleci.com/gh/andrey-pohilko/registry-cli/tree/master.svg?style=svg&circle-token=5216bf89763aec24bbcd6d15494ea32ffc53d66d)](https://circleci.com/gh/andrey-pohilko/registry-cli/tree/master)
 
 # registry-cli
 registry.py is a script for easy manipulation of docker-registry from command line (and from scripts)
@@ -14,15 +14,15 @@ You can download ready-made docker image with the script and all python dependen
     docker pull anoxis/registry-cli
 ```
 
-In this case, in replace 
+In this case, in replace
 ```
     registry.py
 ```
-   with  
+   with
 ```
-   docker run --rm anoxis/registry-cli 
+   docker run --rm anoxis/registry-cli
 ```
-in all commands below, e.g. 
+in all commands below, e.g.
 ```
     docker run --rm anoxis/registry-cli -r http://example.com:5000
 ```
@@ -61,28 +61,28 @@ List particular image(s) or image:tag (all tags of ubuntu and alpine in this exa
 ```
   registry.py -l user:pass -r https://example.com:5000 -i ubuntu alpine
 ```
-  
+
 Same as above but with layers
 ```
   registry.py -l user:pass -r https://example.com:5000 -i ubuntu alpine --layers
 ```
-  
+
 ## Username and password
-  
-  It is optional, you can omit it in case if you use insecure registry without authentication (up to you, 
+
+  It is optional, you can omit it in case if you use insecure registry without authentication (up to you,
   but its really insecure; make sure you protect your entire registry from anyone)
-  
+
   username and password pair can be provided in the following forms
-```  
+```
   -l username:password
   -l 'username':'password'
   -l "username":"password"
 ```
   Username cannot contain colon (':') (I don't think it will contain ever, but anyway I warned you).
   Password, in its turn, can contain as many colons as you wish.
-    
-      
-## Deleting images 
+
+
+## Deleting images
 
 Keep only last 10 versions (useful for CI):
 Delete all tags of all images but keep last 10 tags (you can put this command to your build script
@@ -118,25 +118,29 @@ Delete all tags for particular image (e.g. delete all ubuntu tags):
 ```
   registry.py -l user:pass -r https://example.com:5000 -i ubuntu --delete-all
 ```
-  
+
 Delete all tags for all images (do you really want to do it?):
 ```
-  registry.py -l user:pass -r https://example.com:5000 --delete-all
+  registry.py -l user:pass -r https://example.com:5000 --delete-all --dry-run
 ```
 
+Delete all tags by age in hours for the particular image (e.g. older than 24 hours, with --keep-tags and --keep-tags-like options, --dry-run for safe).
+```
+  registry.py -r https://example.com:5000 -i api-docs-origin/master --dry-run --delete-by-hours 24 --keep-tags c59c02c25f023263fd4b5d43fc1ff653f08b3d4x --keep-tags-like late
+```
 ## Disable ssl verification
 
 If you are using docker registry with a self signed ssl certificate, you can disable ssl verification:
 ```
-  registry.py -l user:pass -r https://example.com:5000 --no-validate-ssl 
+  registry.py -l user:pass -r https://example.com:5000 --no-validate-ssl
 ```
 
-  
-## Important notes: 
 
-### garbage-collection in docker-registry 
-1. docker registry API does not actually delete tags or images, it marks them for later 
-garbage collection. So, make sure you run something like below 
+## Important notes:
+
+### garbage-collection in docker-registry
+1. docker registry API does not actually delete tags or images, it marks them for later
+garbage collection. So, make sure you run something like below
 (or put them in your crontab):
 ```
   cd [path-where-your-docker-compose.yml]
@@ -145,30 +149,30 @@ garbage collection. So, make sure you run something like below
        registry bin/registry garbage-collect \
        /etc/docker/registry/config.yml
   docker-compose up -d registry
-```  
+```
 or (if you are not using docker-compose):
 ```
   docker stop registry:2
   docker run --rm registry:2 bin/registry garbage-collect \
        /etc/docker/registry/config.yml
   docker start registry:2
-```       
+```
 for more detail on garbage collection read here:
    https://docs.docker.com/registry/garbage-collection/
 
 ### enable image deletion in docker-registry
-Make sure to enable it by either creating environment variable 
+Make sure to enable it by either creating environment variable
   `REGISTRY_STORAGE_DELETE_ENABLED: "true"`
 or adding relevant configuration option to the docker-registry's config.yml.
 For more on docker-registry configuration, read here:
   https://docs.docker.com/registry/configuration/
 
-You may get `Error 405` message from script (`Functionality not supported`) when this option is not enabled. 
+You may get `Error 405` message from script (`Functionality not supported`) when this option is not enabled.
 
 
 ## Contribution
-You are very welcome to contribute to this script. Of course, when making changes, 
-please include your changes into `test.py` and run tests to check that your changes 
+You are very welcome to contribute to this script. Of course, when making changes,
+please include your changes into `test.py` and run tests to check that your changes
 do not break existing functionality.
 
 For tests to work, install `mock` library
@@ -187,9 +191,9 @@ Testing started at 9:31 AM ...
   tag digest not found: 400
 error 400
 ```
-this is ok, because test simulates invalid inputs also. 
+this is ok, because test simulates invalid inputs also.
 
 # Contact
 
-Please feel free to contact me at anoxis@gmail.com if you wish to add more functionality 
+Please feel free to contact me at anoxis@gmail.com if you wish to add more functionality
 or want to contribute.
