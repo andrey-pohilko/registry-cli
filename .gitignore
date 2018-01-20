@@ -1,3 +1,6 @@
 # Created by .ignore support plugin (hsz.mobi)
 .gitignore
 .idea/
+dist/
+registry_cli.egg-info/
+registry_cli_apatsev.egg-info/
