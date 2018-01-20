@@ -120,7 +120,7 @@ class Registry:
         return None
 
     def list_images(self):
-        result = self.send('/v2/_catalog')
+        result = self.send('/v2/_catalog?n=10000')
         if result == None:
             return []
 
@@ -282,7 +282,7 @@ for more detail on garbage collection read here:
         '-i','--image',
         help='Specify images and tags to list/delete',
         nargs='+',
-        metavar="IMAGE:[TAG]")    
+        metavar="IMAGE:[TAG]")
 
     parser.add_argument(
         '--keep-tags',
@@ -307,7 +307,7 @@ for more detail on garbage collection read here:
 
     parser.add_argument(
         '--no-validate-ssl',
-        help="Disable ssl validation",        
+        help="Disable ssl validation",
         action='store_const',
         default=False,
         const=True)
@@ -326,7 +326,7 @@ for more detail on garbage collection read here:
         default=False,
         const=True)
 
-    
+
     return parser.parse_args(args)
 
 
@@ -341,7 +341,7 @@ def delete_tags(
 
             print("Getting digest for tag {0}".format(tag))
             digest = registry.get_tag_digest(image_name, tag)
-            if digest is None:            
+            if digest is None:
                 print("Tag {0} does not exist for image {1}. Ignore here.".format(tag, image_name))
                 continue
 
@@ -355,9 +355,9 @@ def delete_tags(
 
         print("  deleting tag {0}".format(tag))
 
-##        deleting layers is disabled because 
+##        deleting layers is disabled because
 ##        it also deletes shared layers
-##        
+##
 ##        for layer in registry.list_tag_layers(image_name, tag):
 ##            layer_digest = layer['digest']
 ##            registry.delete_tag_layer(image_name, layer_digest, dry_run)
@@ -393,7 +393,7 @@ def main_loop(args):
 
     keep_last_versions = int(args.num)
 
-    if args.no_validate_ssl:        
+    if args.no_validate_ssl:
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
     registry = Registry.create(args.host, args.login, args.no_validate_ssl)
@@ -419,7 +419,7 @@ def main_loop(args):
 
         tags_list = get_tags(all_tags_list, image_name, args.tags_like)
 
-        # print(tags and optionally layers        
+        # print(tags and optionally layers
         for tag in tags_list:
             print("  tag: {0}".format(tag))
             if args.layers:
