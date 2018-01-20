@@ -434,7 +434,7 @@ def main_loop(args):
         # add tags to "tags_to_keep" list, if we have regexp "tags_to_keep" entries:
         keep_tags=[]
         if args.keep_tags_like:
-            keep_tags.append(get_tags_like(args.keep_tags_like, tags_list))
+            keep_tags.extend(get_tags_like(args.keep_tags_like, tags_list))
 
 
         # delete tags if told so
