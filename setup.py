@@ -10,7 +10,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='registry-cli-apatsev',
-    version='0.1.1',
+    version='0.1.2',
     description='registry.py is a script for easy manipulation of docker-registry from command line (and from scripts)',
     long_description=long_description,
     url='https://github.com/patsevanton/registry-cli',
@@ -51,5 +51,10 @@ setup(
         'test': ['coverage','mock'],
     },
 
-)
+    entry_points={  # Optional
+        'registry': [
+            'registry=registry:main',
+        ],
+    },
 
+)
