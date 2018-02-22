@@ -8,7 +8,7 @@ jobs:
     docker:
       # specify the version you desire here
       # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
-      - image: circleci/python:2.7
+      - image: circleci/python:3.6.1
       
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
@@ -30,11 +30,13 @@ jobs:
       - run:
           name: install dependencies
           command: |
+            python3 -m venv venv
+            . venv/bin/activate
             pip install -r requirements-ci.txt
 
       - save_cache:
           paths:
-            - .
+            - ./venv
           key: v1-dependencies-{{ checksum "requirements-ci.txt" }}
         
       # run tests!
@@ -47,9 +49,11 @@ jobs:
           command: |
             . venv/bin/activate
             coverage run --include=test.py,registry.py test.py
+
       - run:
           name: generate report
           command: |
+            . venv/bin/activate
             mkdir -p /tmp/coverage
             coverage html -d /tmp/coverage
             mv .coverage /tmp/coverage
