@@ -30,13 +30,11 @@ jobs:
       - run:
           name: install dependencies
           command: |
-            python -m venv venv
-            . venv/bin/activate
-            pip install -r requirements.txt
+            pip install -r requirements-ci.txt
 
       - save_cache:
           paths:
-            - ./venv
+            - .
           key: v1-dependencies-{{ checksum "requirements-ci.txt" }}
         
       # run tests!
