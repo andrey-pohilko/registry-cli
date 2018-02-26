@@ -1,3 +1,9 @@
 mock
 coverage
+certifi
+chardet
+idna
+requests
+urllib3
+www-authenticate
 
