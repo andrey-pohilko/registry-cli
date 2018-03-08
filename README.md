@@ -14,7 +14,7 @@ You can download ready-made docker image with the script and all python dependen
     docker pull anoxis/registry-cli
 ```
 
-In this case, in replace
+In this case, replace the following text
 ```
     registry.py
 ```
