@@ -141,7 +141,7 @@ def get_auth_schemes(r,path):
     
     if DEBUG: print("[debug][funcname]: get_auth_schemes()")
 
-    try_oauth = requests.head('{0}{1}'.format(r.hostname,path))
+    try_oauth = requests.head('{0}{1}'.format(r.hostname,path), verify=not r.no_validate_ssl)
         
     if 'Www-Authenticate' in try_oauth.headers:
         oauth = www_authenticate.parse(try_oauth.headers['Www-Authenticate'])
