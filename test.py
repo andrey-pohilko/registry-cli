@@ -264,6 +264,35 @@ class TestListDigest(unittest.TestCase):
             response, 'sha256:85295b0e7456a8fbbc886722b483f87f2bff553fa0beeaf37f5d807aff7c1e52')
         self.assertEqual(self.registry.last_error, None)
 
+    def test_get_digest_nexus_ok(self):
+        self.registry.http.reset_return_value(status_code=200,
+                                              text=('{'
+                                                    '"schemaVersion": 2,\n '
+                                                    '"mediaType": "application/vnd.docker.distribution.manifest.v2+json"'
+                                                    '"digest": "sha256:357ea8c3d80bc25792e010facfc98aee5972ebc47e290eb0d5aea3671a901cab"'
+                                                    ))
+
+        self.registry.http.return_value.headers = {
+            'Content-Length': '4935',
+            'Docker-Content-Digest': 'sha256:85295b0e7456a8fbbc886722b483f87f2bff553fa0beeaf37f5d807aff7c1e52',
+            'X-Content-Type-Options': 'nosniff'
+        }
+
+        self.registry.digest_method = "GET"
+        response = self.registry.get_tag_digest('image1', '0.1.300')
+        self.registry.http.request.assert_called_with(
+            "GET",
+            "http://testdomain.com/v2/image1/manifests/0.1.300",
+            auth=(None, None),
+            headers=self.registry.HEADERS,
+            verify=True
+        )
+
+        self.assertEqual(
+            response, 'sha256:85295b0e7456a8fbbc886722b483f87f2bff553fa0beeaf37f5d807aff7c1e52')
+        self.assertEqual(self.registry.last_error, None)
+
+
     def test_invalid_status_code(self):
         self.registry.http.reset_return_value(400)
         response = self.registry.get_tag_digest('image1', '0.1.300')
@@ -660,7 +689,8 @@ class TestArgParser(unittest.TestCase):
                      "--no-validate-ssl",
                      "--delete-all",
                      "--layers",
-                     "--delete-by-hours", "24"]
+                     "--delete-by-hours", "24",
+                     "--digest-method", "GET"]
         args = parse_args(args_list)
         self.assertTrue(args.delete)
         self.assertTrue(args.layers)
@@ -674,6 +704,13 @@ class TestArgParser(unittest.TestCase):
         self.assertEqual(args.host, "hostname")
         self.assertEqual(args.keep_tags, ["keep1", "keep2"])
         self.assertEqual(args.delete_by_hours, "24")
+        self.assertEqual(args.digest_method, "GET")
+
+    def test_default_args(self):
+        args_list = ["-r", "hostname",
+                     "-l", "loginstring"]
+        args = parse_args(args_list)
+        self.assertEqual(args.digest_method, "HEAD")
 
 
 if __name__ == '__main__':

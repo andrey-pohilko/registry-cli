@@ -170,6 +170,7 @@ class Registry:
         self.no_validate_ssl = False
         self.http = None
         self.last_error = None
+        self.digest_method = "HEAD"
 
     def parse_login(self, login):
         if login is not None:
@@ -188,7 +189,7 @@ class Registry:
 
 
     @staticmethod
-    def create(host, login, no_validate_ssl):
+    def create(host, login, no_validate_ssl, digest_method = "HEAD"):
         r = Registry()
 
         (r.username, r.password) = r.parse_login(login)
@@ -199,6 +200,7 @@ class Registry:
         r.hostname = host
         r.no_validate_ssl = no_validate_ssl
         r.http = Requests()
+        r.digest_method = digest_method
         return r
 
 
@@ -262,10 +264,10 @@ class Registry:
 
     def get_tag_digest(self, image_name, tag):
         image_headers = self.send("/v2/{0}/manifests/{1}".format(
-            image_name, tag), method="HEAD")
+            image_name, tag), method=self.digest_method)
 
         if image_headers is None:
-            print("  tag digest not found: {0}".format(self.last_error))
+            print("  tag digest not found: {0}. Try --digest-method=GET".format(self.last_error))
             return None
 
         tag_digest = image_headers.headers['Docker-Content-Digest']
@@ -491,6 +493,13 @@ for more detail on garbage collection read here:
         nargs='?',
         metavar='Hours')
 
+    parser.add_argument(
+        '--digest-method',
+        help=('Use HEAD for standard docker registry or GET for NEXUS'),
+        default='HEAD',
+        metavar="HEAD|GET"
+    )
+
     return parser.parse_args(args)
 
 
@@ -620,7 +629,8 @@ def main_loop(args):
 
     args.login = username + ':' + password
 
-    registry = Registry.create(args.host, args.login, args.no_validate_ssl)
+    registry = Registry.create(args.host, args.login, args.no_validate_ssl,
+                               args.digest_method)
     
     registry.auth_schemes = get_auth_schemes(registry,'/v2/_catalog')
     

@@ -135,6 +135,13 @@ If you are using docker registry with a self signed ssl certificate, you can dis
   registry.py -l user:pass -r https://example.com:5000 --no-validate-ssl
 ```
 
+## Nexus docker registry
+
+Add --digest-method flag
+
+```
+registry.py -l user:pass -r https://example.com:5000 --digest-method GET
+```
 
 ## Important notes:
 
@@ -175,7 +182,7 @@ You are very welcome to contribute to this script. Of course, when making change
 please include your changes into `test.py` and run tests to check that your changes
 do not break existing functionality.
 
-For tests to work, install `mock` library
+For tests to work, more libraries are needed
 ```
   pip install -r requirements-ci.txt
 ```
