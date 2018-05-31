@@ -8,9 +8,11 @@ import pprint
 import base64
 import re
 import sys
+import os
 import argparse
 import www_authenticate
 from datetime import timedelta, datetime as dt
+from getpass import getpass
 
 # this is a registry manipulator, can do following:
 # - list all images (including layers)
@@ -383,9 +385,19 @@ for more detail on garbage collection read here:
                 """))
     parser.add_argument(
         '-l', '--login',
-        help="Login and password to access to docker registry",
+        help="Login and password for access to docker registry",
         required=False,
         metavar="USER:PASSWORD")
+
+    parser.add_argument(
+        '-w', '--read-password',
+        help="Read password from stdin (and prompt if stdin is a TTY); " +
+             "the final line-ending character(s) will be removed; " +
+             "the :PASSWORD portion of the -l option is not required and " +
+             "will be ignored",
+        action='store_const',
+        default=False,
+        const=True)
 
     parser.add_argument(
         '-r', '--host',
@@ -580,6 +592,33 @@ def main_loop(args):
 
     if args.no_validate_ssl:
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+    if args.read_password:
+        if args.login is None:
+            print("Please provide -l when using -w")
+            exit(1)
+
+        if ':' in args.login:
+            (username, password) = args.login.split(':', 1)
+        else:
+            username = args.login
+
+        if sys.stdin.isatty():
+            # likely interactive usage
+            password = getpass()
+
+        else:
+            # allow password to be piped or redirected in
+            password = sys.stdin.read()
+
+            if len(password) == 0:
+                print("Password was not provided")
+                exit(1)
+
+            if password[-(len(os.linesep)):] == os.linesep:
+                password = password[0:-(len(os.linesep))]
+
+	args.login = username + ':' + password
 
     registry = Registry.create(args.host, args.login, args.no_validate_ssl)
     
