@@ -618,7 +618,7 @@ def main_loop(args):
             if password[-(len(os.linesep)):] == os.linesep:
                 password = password[0:-(len(os.linesep))]
 
-	args.login = username + ':' + password
+    args.login = username + ':' + password
 
     registry = Registry.create(args.host, args.login, args.no_validate_ssl)
     
