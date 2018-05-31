@@ -42,7 +42,7 @@ Download registry.py and set it as executable
 
 Install dependencies:
 ```
-  sudo pip install -r requirements.txt
+  sudo pip install -r requirements-build.txt
 ```
 
 ## Listing images
@@ -177,7 +177,7 @@ do not break existing functionality.
 
 For tests to work, install `mock` library
 ```
-  pip install -r requirements-test.txt
+  pip install -r requirements-ci.txt
 ```
 
 Running tests is as simple as
