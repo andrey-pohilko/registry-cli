@@ -3,6 +3,20 @@
 # registry-cli
 registry.py is a script for easy manipulation of docker-registry from command line (and from scripts)
 
+## Table of Contents
+
+* [Installation](#installation)
+  * [Docker image](#docker-image)
+  * [Python script](#python-script)
+* [Listing images](#listing-images) 
+* [Username and password](#username-and-password)
+* [Deleting images](#deleting-images)
+* [Disable ssl verification](#disable-ssl-verification)
+* [Nexus docker registry](#nexus-docker-registry)
+* [Important notes](#important-notes)
+  * [garbage-collection in docker-registry](#garbage-collection-in-docker-registry)
+  * [enable image deletion in docker-registry](#enable-image-deletion-in-docker-registry)
+* [Contribution](#contribution)
 
 ## Installation
 
