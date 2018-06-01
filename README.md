@@ -14,14 +14,7 @@ You can download ready-made docker image with the script and all python dependen
     docker pull anoxis/registry-cli
 ```
 
-In this case, replace the following text
-```
-    registry.py
-```
-   with
-```
-   docker run --rm anoxis/registry-cli
-```
+In this case, replace `registry.py` with `docker run --rm anoxis/registry-cli`
 in all commands below, e.g.
 ```
     docker run --rm anoxis/registry-cli -r http://example.com:5000
