@@ -1,5 +1,6 @@
 import unittest
-from registry import Registry, Requests, get_tags, parse_args, delete_tags, delete_tags_by_age
+from registry import Registry, Requests, get_tags, parse_args, \
+    delete_tags, delete_tags_by_age, get_error_explanation
 from mock import MagicMock, patch
 import requests
 
@@ -148,6 +149,15 @@ class TestRegistrySend(unittest.TestCase):
                                                             "test_password"),
                                                       headers=self.registry.HEADERS,
                                                       verify=True)
+
+class TestGetrrorExplanation(unittest.TestCase):
+    def test_get_tag_digest_404(self):
+        self.assertEqual(get_error_explanation("delete_tag", "405"),
+                         'You might want to set REGISTRY_STORAGE_DELETE_ENABLED: "true" in your registry')
+
+    def test_delete_digest_405(self):
+        self.assertEqual(get_error_explanation("get_tag_digest", "404"),
+                         "Try adding flag --digest-method=GET")
 
 
 class TestListImages(unittest.TestCase):

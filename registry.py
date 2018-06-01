@@ -134,13 +134,16 @@ def decode_base64(data):
     return base64.decodestring(data)
 
 
-def print_error_explanation(context, error_code):
+def get_error_explanation(context, error_code):
     error_list = {"delete_tag_405": 'You might want to set REGISTRY_STORAGE_DELETE_ENABLED: "true" in your registry',
                   "get_tag_digest_404": "Try adding flag --digest-method=GET"}
 
     key = "%s_%s" % (context, error_code)
+
     if key in error_list.keys():
-        print(error_list[key])
+        return(error_list[key])
+
+    return ''
 
 def get_auth_schemes(r,path):
     """ Returns list of auth schemes(lowcased) if www-authenticate: header exists
@@ -276,7 +279,7 @@ class Registry:
 
         if image_headers is None:
             print("  tag digest not found: {0}.".format(self.last_error))
-            print_error_explanation("get_tag_digest", self.last_error)
+            print(get_error_explanation("get_tag_digest", self.last_error))
             return None
 
         tag_digest = image_headers.headers['Docker-Content-Digest']
@@ -303,7 +306,7 @@ class Registry:
 
         if delete_result is None:
             print("failed, error: {0}".format(self.last_error))
-            print_error_explanation("delete_tag", self.last_error)
+            print(get_error_explanation("delete_tag", self.last_error))
             return False
 
         tag_digests_to_ignore.append(tag_digest)
