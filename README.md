@@ -118,7 +118,7 @@ In the following case, all tags beginning with "snapshot-" will be deleted, save
 ```
   registry.py -l user:pass -r https://example.com:5000 --delete --tags-like "snapshot-" --keep-tags "stable" "latest"
 ```
-The last parameter is also available as regexp option with "--keep-tags-like".
+The last parameter is also available as regexp option with `--keep-tags-like`.
 
 
 Delete all tags for particular image (e.g. delete all ubuntu tags):
@@ -131,7 +131,7 @@ Delete all tags for all images (do you really want to do it?):
   registry.py -l user:pass -r https://example.com:5000 --delete-all --dry-run
 ```
 
-Delete all tags by age in hours for the particular image (e.g. older than 24 hours, with --keep-tags and --keep-tags-like options, --dry-run for safe).
+Delete all tags by age in hours for the particular image (e.g. older than 24 hours, with `--keep-tags` and `--keep-tags-like` options, `--dry-run` for safe).
 ```
   registry.py -r https://example.com:5000 -i api-docs-origin/master --dry-run --delete-by-hours 24 --keep-tags c59c02c25f023263fd4b5d43fc1ff653f08b3d4x --keep-tags-like late
 ```
@@ -149,7 +149,7 @@ If you are using docker registry with a self signed ssl certificate, you can dis
 
 ## Nexus docker registry
 
-Add --digest-method flag
+Add `--digest-method` flag
 
 ```
 registry.py -l user:pass -r https://example.com:5000 --digest-method GET
