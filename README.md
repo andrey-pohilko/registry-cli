@@ -8,7 +8,7 @@ registry.py is a script for easy manipulation of docker-registry from command li
 * [Installation](#installation)
   * [Docker image](#docker-image)
   * [Python script](#python-script)
-* [Listing images](#listing-images) 
+* [Listing images](#listing-images)
 * [Username and password](#username-and-password)
 * [Deleting images](#deleting-images)
 * [Disable ssl verification](#disable-ssl-verification)
@@ -113,7 +113,7 @@ The following command would delete all tags containing "snapshot-" and beginning
 
 As one manifest may be referenced by more than one tag, you may add tags, whose manifests should NOT be deleted.
 A tag that would otherwise be deleted, but whose manifest references one of those "kept" tags, is spared for deletion.
-In the following case, all tags beginning with "snapshot-" will be deleted, safe those whose manifest point to "stable" or "latest"
+In the following case, all tags beginning with "snapshot-" will be deleted, save those whose manifest point to "stable" or "latest":
 
 ```
   registry.py -l user:pass -r https://example.com:5000 --delete --tags-like "snapshot-" --keep-tags "stable" "latest"
@@ -134,6 +134,11 @@ Delete all tags for all images (do you really want to do it?):
 Delete all tags by age in hours for the particular image (e.g. older than 24 hours, with --keep-tags and --keep-tags-like options, --dry-run for safe).
 ```
   registry.py -r https://example.com:5000 -i api-docs-origin/master --dry-run --delete-by-hours 24 --keep-tags c59c02c25f023263fd4b5d43fc1ff653f08b3d4x --keep-tags-like late
+```
+
+Note that deleting by age will not prevent more recent tags from being deleted if there are more than 10 (or specified `--num` value). In order to keep all tags within a designated period, use the `--keep-by-hours` flag:
+```
+  registry.py -r https://example.com:5000 --dry-run --delete --keep-by-hours 72 --keep-tags-like latest
 ```
 ## Disable ssl verification
 
