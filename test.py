@@ -1,6 +1,6 @@
 import unittest
 from registry import Registry, Requests, get_tags, parse_args, \
-    delete_tags, delete_tags_by_age, get_error_explanation
+    delete_tags, delete_tags_by_age, get_error_explanation, get_newer_tags
 from mock import MagicMock, patch
 import requests
 
@@ -150,7 +150,7 @@ class TestRegistrySend(unittest.TestCase):
                                                       headers=self.registry.HEADERS,
                                                       verify=True)
 
-class TestGetrrorExplanation(unittest.TestCase):
+class TestGetErrorExplanation(unittest.TestCase):
     def test_get_tag_digest_404(self):
         self.assertEqual(get_error_explanation("delete_tag", "405"),
                          'You might want to set REGISTRY_STORAGE_DELETE_ENABLED: "true" in your registry')
@@ -681,6 +681,39 @@ class TestDeleteTagsByAge(unittest.TestCase):
             self.registry, "imagename", True, ["image"], ["latest"])
 
 
+class TestGetNewerTags(unittest.TestCase):
+
+    def setUp(self):
+        self.registry = Registry()
+        self.registry.http = MockRequests()
+
+        self.get_tag_config_mock = MagicMock(return_value={'mediaType': 'application/vnd.docker.container.image.v1+json', 'size': 12953,
+                                                           'digest': 'sha256:8d71dfbf239c0015ad66993d55d3954cee2d52d86f829fdff9ccfb9f23b75aa8'})
+        self.registry.get_tag_config = self.get_tag_config_mock
+        self.get_image_age_mock = MagicMock(
+            return_value="2017-12-27T12:47:33.511765448Z")
+        self.registry.get_image_age = self.get_image_age_mock
+        self.list_tags_mock = MagicMock(return_value=["image"])
+        self.registry.list_tags = self.list_tags_mock
+        self.get_tag_digest_mock = MagicMock()
+        self.registry.get_tag_digest = self.get_tag_digest_mock
+        self.registry.http = MockRequests()
+        self.registry.hostname = "http://testdomain.com"
+        self.registry.http.reset_return_value(200, "MOCK_DIGEST")
+
+        def test_keep_tags_by_age_no_keep(self):
+            self.assertEqual(
+                get_newer_tags(self.registry, "imagename", 23, ["latest"]),
+                []
+            )
+
+        def test_keep_tags_by_age_keep(self):
+            self.assertEqual(
+                get_newer_tags(self.registry, "imagename", 24, ["latest"]),
+                ["latest"]
+            )
+
+
 class TestArgParser(unittest.TestCase):
 
     def test_no_args(self):
@@ -700,6 +733,7 @@ class TestArgParser(unittest.TestCase):
                      "--delete-all",
                      "--layers",
                      "--delete-by-hours", "24",
+                     "--keep-by-hours", "24",
                      "--digest-method", "GET"]
         args = parse_args(args_list)
         self.assertTrue(args.delete)
@@ -714,6 +748,7 @@ class TestArgParser(unittest.TestCase):
         self.assertEqual(args.host, "hostname")
         self.assertEqual(args.keep_tags, ["keep1", "keep2"])
         self.assertEqual(args.delete_by_hours, "24")
+        self.assertEqual(args.keep_by_hours, "24")
         self.assertEqual(args.digest_method, "GET")
 
     def test_default_args(self):
