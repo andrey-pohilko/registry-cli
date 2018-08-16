@@ -13,6 +13,7 @@ import argparse
 import www_authenticate
 from datetime import timedelta, datetime as dt
 from getpass import getpass
+from multiprocessing.pool import ThreadPool
 
 # this is a registry manipulator, can do following:
 # - list all images (including layers)
@@ -550,11 +551,20 @@ def delete_tags(
 
             keep_tag_digests.append(digest)
 
+    def delete(tag):
+        print("  deleting tag {0}".format(tag))
+        registry.delete_tag(image_name, tag, dry_run, keep_tag_digests)
+
+    p = ThreadPool(4)
+    tasks = []
     for tag in tags_to_delete:
         if tag in tags_to_keep:
             continue
-
-        print("  deleting tag {0}".format(tag))
+        tasks.append(p.apply_async(delete, args=(tag,)))
+    for task in tasks:
+        task.get()
+    p.close()
+    p.join()
 
 # deleting layers is disabled because
 # it also deletes shared layers
@@ -562,8 +572,6 @@ def delete_tags(
 # for layer in registry.list_tag_layers(image_name, tag):
 # layer_digest = layer['digest']
 # registry.delete_tag_layer(image_name, layer_digest, dry_run)
-
-        registry.delete_tag(image_name, tag, dry_run, keep_tag_digests)
 
 
 def get_tags_like(args_tags_like, tags_list):
@@ -620,27 +628,30 @@ def delete_tags_by_age(registry, image_name, dry_run, hours, tags_to_keep):
 
 
 def get_newer_tags(registry, image_name, hours, tags_list):
-    newer_tags = []
-    print('---------------------------------')
-    for tag in tags_list:
+    def newer(tag):
         image_config = registry.get_tag_config(image_name, tag)
-
         if image_config == []:
             print("tag not found")
-            continue
-
+            return None
         image_age = registry.get_image_age(image_name, image_config)
-
         if image_age == []:
             print("timestamp not found")
-            continue
-
+            return None
         if dt.strptime(image_age[:-4], "%Y-%m-%dT%H:%M:%S.%f") >= dt.now() - timedelta(hours=int(hours)):
             print("Keeping tag: {0} timestamp: {1}".format(
                 tag, image_age))
-            newer_tags.append(tag)
+            return tag
+        else:
+            print("Will delete tag: {0} timestamp: {1}".format(
+                tag, image_age))
+            return None
 
-    return newer_tags
+    print('---------------------------------')
+    p = ThreadPool(4)
+    result = list(x for x in p.map(newer, tags_list) if x)
+    p.close()
+    p.join()
+    return result
 
 
 def keep_images_like(image_list, regexp_list):
