@@ -458,6 +458,13 @@ for more detail on garbage collection read here:
         metavar="IMAGE:[TAG]")
 
     parser.add_argument(
+        '--images-like',
+        nargs='+',
+        help="List of images (regexp check) that will be handled",
+        required=False,
+        default=[])
+
+    parser.add_argument(
         '--keep-tags',
         nargs='+',
         help="List of tags that will be omitted from deletion if used in combination with --delete or --delete-all",
@@ -636,6 +643,17 @@ def get_newer_tags(registry, image_name, hours, tags_list):
     return newer_tags
 
 
+def keep_images_like(image_list, regexp_list):
+    result = []
+    regexp_list = list(map(re.compile, regexp_list))
+    for image in image_list:
+        for regexp in regexp_list:
+            if re.search(regexp, image):
+                result.append(image)
+                break
+    return result
+
+
 def main_loop(args):
     global DEBUG
 
@@ -685,6 +703,8 @@ def main_loop(args):
         image_list = args.image
     else:
         image_list = registry.list_images()
+        if args.images_like:
+            image_list = keep_images_like(image_list, args.images_like)
 
     # loop through registry's images
     # or through the ones given in command line
