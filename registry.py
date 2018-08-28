@@ -201,7 +201,7 @@ class Registry:
 
 
     @staticmethod
-    def create(host, login, no_validate_ssl, digest_method = "HEAD"):
+    def _create(host, login, no_validate_ssl, digest_method = "HEAD"):
         r = Registry()
 
         (r.username, r.password) = r.parse_login(login)
@@ -214,6 +214,10 @@ class Registry:
         r.http = Requests()
         r.digest_method = digest_method
         return r
+
+    @staticmethod
+    def create(*args, **kw):
+        return Registry._create(*args, **kw)
 
 
     def send(self, path, method="GET"):
@@ -655,6 +659,8 @@ def get_newer_tags(registry, image_name, hours, tags_list):
 
 
 def keep_images_like(image_list, regexp_list):
+    if image_list is None or regexp_list is None:
+        return []
     result = []
     regexp_list = list(map(re.compile, regexp_list))
     for image in image_list:
