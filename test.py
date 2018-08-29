@@ -1,6 +1,7 @@
 import unittest
 from registry import Registry, Requests, get_tags, parse_args, \
-    delete_tags, delete_tags_by_age, get_error_explanation, get_newer_tags
+    delete_tags, delete_tags_by_age, get_error_explanation, get_newer_tags, \
+    keep_images_like, main_loop
 from mock import MagicMock, patch
 import requests
 
@@ -712,6 +713,47 @@ class TestGetNewerTags(unittest.TestCase):
                 get_newer_tags(self.registry, "imagename", 24, ["latest"]),
                 ["latest"]
             )
+
+
+class TestKeepImagesLike(unittest.TestCase):
+
+    # tests the filtering works
+    def test_keep_images_like(self):
+        self.images = ["lorem", "ipsum", "dolor", "sit", "amet"]
+        self.assertEqual(keep_images_like(self.images, ["bad"]), [])
+        self.assertEqual(keep_images_like(self.images, ["lorem"]), ["lorem"])
+        self.assertEqual(keep_images_like(self.images, ["lorem", "ipsum"]), ["lorem", "ipsum"])
+        self.assertEqual(keep_images_like(self.images, ["i"]), ["ipsum", "sit"])
+        self.assertEqual(keep_images_like(self.images, ["^i"]), ["ipsum"])
+        self.assertEqual(keep_images_like([], ["^i"]), [])
+        self.assertEqual(keep_images_like(self.images, []), [])
+        self.assertEqual(keep_images_like([], []), [])
+        self.assertEqual(keep_images_like(None, None), [])
+
+    # mock Registry.create that sets things up
+    # we need this because we want to call main_loop
+    # which creates the Registry object by itself calling create
+    @staticmethod
+    def mock_create(h, l, n, d="HEAD"):
+        r = Registry._create(h, l, n, d)
+        r.http = MockRequests()
+        r.list_images = MagicMock(return_value=['a', 'b', 'c'])
+        return r
+
+    @patch('registry.Registry.create', mock_create)
+    @patch('registry.get_auth_schemes')  # called in main_loop, turn to noop
+    @patch('registry.keep_images_like')
+    def test_main_calls(self, keep_images_like_patched, get_auth_schemes_patched):
+        # check if keep_images_like is called when passed --images-like
+        main_loop(parse_args(('-r', 'localhost:8989', '--images-like', 'me')))
+        keep_images_like_patched.assert_called_with(['a', 'b', 'c'], ['me'])
+
+        # check if keep_images_like is *not* called when passed --images-like
+        keep_images_like_patched.reset_mock()
+        args = parse_args(('-r', 'localhost:8989'))
+        args.image = []  # this makes the for loop in main_loop not run at all
+        main_loop(args)
+        keep_images_like_patched.assert_not_called()
 
 
 class TestArgParser(unittest.TestCase):
