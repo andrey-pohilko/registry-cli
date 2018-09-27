@@ -85,7 +85,10 @@ class Requests:
             if DEBUG:
                 print('[debug][auth][request] Refreshing auth token: POST {0}'.format(request_url))
 
-            try_oauth = requests.post(request_url, auth=auth, **kwargs)
+            if args.auth_method == 'GET':
+                try_oauth = requests.get(request_url, auth=auth, **kwargs)
+            else:
+                try_oauth = requests.post(request_url, auth=auth, **kwargs)
 
             try:
                 token = ast.literal_eval(try_oauth._content)['token']
@@ -530,6 +533,13 @@ for more detail on garbage collection read here:
         help=('Use HEAD for standard docker registry or GET for NEXUS'),
         default='HEAD',
         metavar="HEAD|GET"
+    )
+
+    parser.add_argument(
+        '--auth-method',
+        help=('Use POST or GET to get JWT tokens'),
+        default='POST',
+        metavar="POST|GET"
     )
 
     return parser.parse_args(args)
