@@ -11,6 +11,7 @@ import sys
 import os
 import argparse
 import www_authenticate
+import _strptime
 from datetime import timedelta, datetime as dt
 from getpass import getpass
 from multiprocessing.pool import ThreadPool
