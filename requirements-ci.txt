@@ -2,8 +2,8 @@ mock
 coverage
 certifi
 chardet
-idna
-requests
+idna>=2.5
+requests>=2.20.0
 urllib3
 www-authenticate
 
