@@ -4,6 +4,6 @@ certifi
 chardet
 idna>=2.5
 requests>=2.20.0
-urllib3
+urllib3=>1.23
 www-authenticate
 
