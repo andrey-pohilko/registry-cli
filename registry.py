@@ -79,17 +79,25 @@ class Requests:
                 pprint.pprint(oauth['bearer'])
 
             # print('[info] retreiving bearer token for {0}'.format(oauth['bearer']['scope']))
-            request_url = '{0}?service={1}&scope={2}'.format(oauth['bearer']['realm'],
-                oauth['bearer']['service'],
-                oauth['bearer']['scope'])
+            request_url = '{0}'.format(oauth['bearer']['realm'])
+            query_separator = '?'
+            if 'service' in oauth['bearer']:
+                request_url += '{0}service={1}'.format(query_separator, oauth['bearer']['service'])
+                query_separator = '&'
+            if 'scope' in oauth['bearer']:
+                request_url += '{0}scope={1}'.format(query_separator, oauth['bearer']['scope'])
 
             if DEBUG:
                 print('[debug][auth][request] Refreshing auth token: POST {0}'.format(request_url))
 
-            try_oauth = requests.post(request_url, auth=auth, **kwargs)
+            if args.auth_method == 'GET':
+                try_oauth = requests.get(request_url, auth=auth, **kwargs)
+            else:
+                try_oauth = requests.post(request_url, auth=auth, **kwargs)
 
             try:
-                token = ast.literal_eval(try_oauth._content)['token']
+                oauth_response = ast.literal_eval(try_oauth._content.decode('utf-8'))
+                token = oauth_response['access_token'] if 'access_token' in oauth_response else oauth_response['token']
             except SyntaxError:
                 print('\n\n[ERROR] couldnt accure token: {0}'.format(try_oauth._content))
                 sys.exit(1)
@@ -532,7 +540,12 @@ for more detail on garbage collection read here:
         default='HEAD',
         metavar="HEAD|GET"
     )
-
+    parser.add_argument(
+         '--auth-method',
+         help=('Use POST or GET to get JWT tokens'),
+         default='POST',
+         metavar="POST|GET"
+    )
     return parser.parse_args(args)
 
 
