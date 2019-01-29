@@ -672,6 +672,29 @@ def get_newer_tags(registry, image_name, hours, tags_list):
     return result
 
 
+def get_datetime_tags(registry, image_name, tags_list):
+    def newer(tag):
+        image_config = registry.get_tag_config(image_name, tag)
+        if image_config == []:
+            print("tag not found")
+            return None
+        image_age = registry.get_image_age(image_name, image_config)
+        if image_age == []:
+            print("timestamp not found")
+            return None
+        return {
+            "tag": tag,
+            "datetime": dt.strptime(image_age[:-4], "%Y-%m-%dT%H:%M:%S.%f")
+        }
+
+    print('---------------------------------')
+    p = ThreadPool(4)
+    result = list(x for x in p.map(newer, tags_list) if x)
+    p.close()
+    p.join()
+    return result
+
+
 def keep_images_like(image_list, regexp_list):
     if image_list is None or regexp_list is None:
         return []
@@ -778,8 +801,12 @@ def main_loop(args):
             if args.delete_all:
                 tags_list_to_delete = list(tags_list)
             else:
-                tags_list_to_delete = sorted(tags_list, key=natural_keys)[
-                    :-keep_last_versions]
+                tags_date = get_datetime_tags(registry, image_name, tags_list)
+                sorted_tags_by_date = sorted(
+                    tags_date,
+                    key=lambda x: x["datetime"], reverse=True
+                )
+                tags_list_to_delete = [x["tag"] for x in sorted_tags_by_date][keep_last_versions:]
 
                 # A manifest might be shared between different tags. Explicitly add those
                 # tags that we want to preserve to the keep_tags list, to prevent
