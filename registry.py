@@ -636,7 +636,15 @@ def delete_tags_by_age(registry, image_name, dry_run, hours, tags_to_keep):
             print("timestamp not found")
             continue
 
-        if dt.strptime(image_age[:-4], "%Y-%m-%dT%H:%M:%S.%f") < dt.now() - timedelta(hours=int(hours)):
+        try:
+            image_dt = dt.strptime(image_age[:-4], "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError as e:
+            if "1970-01-01" in image_age:
+                # whatever... long time ago
+                image_dt = dt.now() - timedelta(days=30*365)
+            else:
+                raise e
+        if image_dt < dt.now() - timedelta(hours=int(hours)):
             print("will be deleted tag: {0} timestamp: {1}".format(
                 tag, image_age))
             tags_to_delete.append(tag)
