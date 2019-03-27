@@ -216,7 +216,7 @@ class Registry:
         (r.username, r.password) = r.parse_login(login)
         if r.last_error is not None:
             print(r.last_error)
-            exit(1)
+            sys.exit(1)
 
         r.hostname = host
         r.no_validate_ssl = no_validate_ssl
@@ -249,7 +249,7 @@ class Registry:
         #     print("cannot connect to {0}\nerror {1}".format(
         #         self.hostname,
         #         error))
-        #     exit(1)
+        #     sys.exit(1)
         if str(result.status_code)[0] == '2':
             self.last_error = None
             return result
@@ -356,7 +356,7 @@ class Registry:
         json_result = json.loads(config_result.text)
         if json_result['schemaVersion'] == 1:
             print("Docker schemaVersion 1 isn't supported for deleting by age now")
-            exit(1)
+            sys.exit(1)
         else:
             tag_config = json_result['config']
 
@@ -698,7 +698,7 @@ def main_loop(args):
     if args.read_password:
         if args.login is None:
             print("Please provide -l when using -w")
-            exit(1)
+            sys.exit(1)
 
         if ':' in args.login:
             (username, password) = args.login.split(':', 1)
@@ -715,7 +715,7 @@ def main_loop(args):
 
             if len(password) == 0:
                 print("Password was not provided")
-                exit(1)
+                sys.exit(1)
 
             if password[-(len(os.linesep)):] == os.linesep:
                 password = password[0:-(len(os.linesep))]
@@ -804,4 +804,4 @@ if __name__ == "__main__":
         main_loop(args)
     except KeyboardInterrupt:
         print("Ctrl-C pressed, quitting")
-        exit(1)
+        sys.exit(1)
