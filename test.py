@@ -846,7 +846,7 @@ class TestArgParser(unittest.TestCase):
                      "--delete-by-hours", "24",
                      "--keep-by-hours", "24",
                      "--digest-method", "GET",
-                     "--order-by-age"]
+                     "--order-by-date"]
         args = parse_args(args_list)
         self.assertTrue(args.delete)
         self.assertTrue(args.layers)
