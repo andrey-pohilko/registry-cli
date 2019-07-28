@@ -1,7 +1,10 @@
 import unittest
+
+from datetime import datetime
+
 from registry import Registry, Requests, get_tags, parse_args, \
     delete_tags, delete_tags_by_age, get_error_explanation, get_newer_tags, \
-    keep_images_like, main_loop
+    keep_images_like, main_loop, get_datetime_tags, get_ordered_tags
 from mock import MagicMock, patch
 import requests
 
@@ -715,6 +718,72 @@ class TestGetNewerTags(unittest.TestCase):
             )
 
 
+class TestGetDatetimeTags(unittest.TestCase):
+
+    def setUp(self):
+        self.registry = Registry()
+        self.registry.http = MockRequests()
+
+        self.get_tag_config_mock = MagicMock(return_value={'mediaType': 'application/vnd.docker.container.image.v1+json', 'size': 12953,
+                                                           'digest': 'sha256:8d71dfbf239c0015ad66993d55d3954cee2d52d86f829fdff9ccfb9f23b75aa8'})
+        self.registry.get_tag_config = self.get_tag_config_mock
+        self.get_image_age_mock = MagicMock(
+            return_value="2017-12-27T12:47:33.511765448Z")
+        self.registry.get_image_age = self.get_image_age_mock
+        self.list_tags_mock = MagicMock(return_value=["image"])
+        self.registry.list_tags = self.list_tags_mock
+        self.get_tag_digest_mock = MagicMock()
+        self.registry.get_tag_digest = self.get_tag_digest_mock
+        self.registry.http = MockRequests()
+        self.registry.hostname = "http://testdomain.com"
+        self.registry.http.reset_return_value(200, "MOCK_DIGEST")
+
+    def test_get_datetime_tags(self):
+        self.assertEqual(
+            get_datetime_tags(self.registry, "imagename", ["latest"]),
+            [{"tag": "latest", "datetime": datetime(2017, 12, 27, 12, 47, 33, 511765)}]
+        )
+
+
+class TestGetOrderedTags(unittest.TestCase):
+    def setUp(self):
+        self.tags = ["e61d48b", "ff24a83", "ddd514c", "f4ba381", "9d5fab2"]
+
+    def test_tags_are_ordered_by_name_by_default(self):
+        tags = ["v1", "v10", "v2"]
+        ordered_tags = get_ordered_tags(registry=None, image_name=None, tags_list=tags)
+        self.assertEqual(ordered_tags, ["v1", "v2", "v10"])
+
+    @patch('registry.get_datetime_tags')
+    def test_tags_are_ordered_ascending_by_date_if_the_option_is_given(self, get_datetime_tags_patched):
+        tags = ["e61d48b", "ff24a83", "ddd514c", "f4ba381", "9d5fab2"]
+        get_datetime_tags_patched.return_value = [
+            {
+                "tag": "e61d48b",
+                "datetime": datetime(2025, 1, 1)
+            },
+            {
+                "tag": "ff24a83",
+                "datetime": datetime(2024, 1, 1)
+            },
+            {
+                "tag": "ddd514c",
+                "datetime": datetime(2023, 1, 1)
+            },
+            {
+                "tag": "f4ba381",
+                "datetime": datetime(2022, 1, 1)
+            },
+            {
+                "tag": "9d5fab2",
+                "datetime": datetime(2021, 1, 1)
+            }
+        ]
+        ordered_tags = get_ordered_tags(registry="registry", image_name="image", tags_list=tags, order_by_date=True)
+        get_datetime_tags_patched.assert_called_once_with("registry", "image", tags)
+        self.assertEqual(ordered_tags, ["9d5fab2", "f4ba381", "ddd514c", "ff24a83", "e61d48b"])
+
+
 class TestKeepImagesLike(unittest.TestCase):
 
     # tests the filtering works
@@ -776,13 +845,15 @@ class TestArgParser(unittest.TestCase):
                      "--layers",
                      "--delete-by-hours", "24",
                      "--keep-by-hours", "24",
-                     "--digest-method", "GET"]
+                     "--digest-method", "GET",
+                     "--order-by-age"]
         args = parse_args(args_list)
         self.assertTrue(args.delete)
         self.assertTrue(args.layers)
         self.assertTrue(args.no_validate_ssl)
         self.assertTrue(args.delete_all)
         self.assertTrue(args.layers)
+        self.assertTrue(args.order_by_date)
         self.assertEqual(args.image, ["imagename1", "imagename2"])
         self.assertEqual(args.num, "15")
         self.assertEqual(args.login, "loginstring")
@@ -798,6 +869,7 @@ class TestArgParser(unittest.TestCase):
                      "-l", "loginstring"]
         args = parse_args(args_list)
         self.assertEqual(args.digest_method, "HEAD")
+        self.assertFalse(args.order_by_date)
 
 
 if __name__ == '__main__':
