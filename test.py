@@ -2,6 +2,8 @@ import unittest
 
 from datetime import datetime
 
+from dateutil.tz import tzutc, tzoffset
+
 from registry import Registry, Requests, get_tags, parse_args, \
     delete_tags, delete_tags_by_age, get_error_explanation, get_newer_tags, \
     keep_images_like, main_loop, get_datetime_tags, get_ordered_tags
@@ -663,6 +665,18 @@ class TestDeleteTagsByAge(unittest.TestCase):
             self.registry, "imagename", False, ["image"], [])
 
     @patch('registry.delete_tags')
+    def test_delete_tags_by_age_no_keep_with_non_utc_value(self, delete_tags_patched):
+        self.registry.get_image_age.return_value = "2017-12-27T12:47:33.511765448+02:00"
+        delete_tags_by_age(self.registry, "imagename", False, 24, [])
+        self.list_tags_mock.assert_called_with(
+            "imagename"
+        )
+        self.list_tags_mock.assert_called_with("imagename")
+        self.get_tag_config_mock.assert_called_with("imagename", "image")
+        delete_tags_patched.assert_called_with(
+            self.registry, "imagename", False, ["image"], [])
+
+    @patch('registry.delete_tags')
     def test_delete_tags_by_age_keep_tags(self, delete_tags_patched):
         delete_tags_by_age(self.registry, "imagename", False, 24, ["latest"])
         self.list_tags_mock.assert_called_with(
@@ -717,6 +731,13 @@ class TestGetNewerTags(unittest.TestCase):
                 ["latest"]
             )
 
+        def test_keep_tags_by_age_no_keep_non_utc_datetime(self):
+            self.registry.get_image_age.return_value = "2017-12-27T12:47:33.511765448+02:00"
+            self.assertEqual(
+                get_newer_tags(self.registry, "imagename", 23, ["latest"]),
+                []
+            )
+
 
 class TestGetDatetimeTags(unittest.TestCase):
 
@@ -741,7 +762,14 @@ class TestGetDatetimeTags(unittest.TestCase):
     def test_get_datetime_tags(self):
         self.assertEqual(
             get_datetime_tags(self.registry, "imagename", ["latest"]),
-            [{"tag": "latest", "datetime": datetime(2017, 12, 27, 12, 47, 33, 511765)}]
+            [{"tag": "latest", "datetime": datetime(2017, 12, 27, 12, 47, 33, 511765, tzinfo=tzutc())}]
+        )
+
+    def test_get_non_utc_datetime_tags(self):
+        self.registry.get_image_age.return_value = "2019-07-18T16:33:15.864962122+02:00"
+        self.assertEqual(
+            get_datetime_tags(self.registry, "imagename", ["latest"]),
+            [{"tag": "latest", "datetime": datetime(2019, 7, 18, 16, 33, 15, 864962, tzinfo=tzoffset(None, 7200))}]
         )
 
 
@@ -760,23 +788,23 @@ class TestGetOrderedTags(unittest.TestCase):
         get_datetime_tags_patched.return_value = [
             {
                 "tag": "e61d48b",
-                "datetime": datetime(2025, 1, 1)
+                "datetime": datetime(2025, 1, 1, tzinfo=tzutc())
             },
             {
                 "tag": "ff24a83",
-                "datetime": datetime(2024, 1, 1)
+                "datetime": datetime(2024, 1, 1, tzinfo=tzutc())
             },
             {
                 "tag": "ddd514c",
-                "datetime": datetime(2023, 1, 1)
+                "datetime": datetime(2023, 1, 1, tzinfo=tzutc())
             },
             {
                 "tag": "f4ba381",
-                "datetime": datetime(2022, 1, 1)
+                "datetime": datetime(2022, 1, 1, tzinfo=tzutc())
             },
             {
                 "tag": "9d5fab2",
-                "datetime": datetime(2021, 1, 1)
+                "datetime": datetime(2021, 1, 1, tzinfo=tzutc())
             }
         ]
         ordered_tags = get_ordered_tags(registry="registry", image_name="image", tags_list=tags, order_by_date=True)
