@@ -11,10 +11,11 @@ import sys
 import os
 import argparse
 import www_authenticate
-import _strptime
 from datetime import timedelta, datetime as dt
 from getpass import getpass
 from multiprocessing.pool import ThreadPool
+from dateutil.parser import parse
+from dateutil.tz import tzutc
 
 # this is a registry manipulator, can do following:
 # - list all images (including layers)
@@ -642,7 +643,7 @@ def delete_tags_by_age(registry, image_name, dry_run, hours, tags_to_keep):
             print("timestamp not found")
             continue
 
-        if dt.strptime(image_age[:-4], "%Y-%m-%dT%H:%M:%S.%f") < dt.now() - timedelta(hours=int(hours)):
+        if parse(image_age).astimezone(tzutc()) < dt.now(tzutc()) - timedelta(hours=int(hours)):
             print("will be deleted tag: {0} timestamp: {1}".format(
                 tag, image_age))
             tags_to_delete.append(tag)
@@ -661,7 +662,7 @@ def get_newer_tags(registry, image_name, hours, tags_list):
         if image_age == []:
             print("timestamp not found")
             return None
-        if dt.strptime(image_age[:-4], "%Y-%m-%dT%H:%M:%S.%f") >= dt.now() - timedelta(hours=int(hours)):
+        if parse(image_age).astimezone(tzutc()) >= dt.now(tzutc()) - timedelta(hours=int(hours)):
             print("Keeping tag: {0} timestamp: {1}".format(
                 tag, image_age))
             return tag
@@ -690,7 +691,7 @@ def get_datetime_tags(registry, image_name, tags_list):
             return None
         return {
             "tag": tag,
-            "datetime": dt.strptime(image_age[:-4], "%Y-%m-%dT%H:%M:%S.%f")
+            "datetime": parse(image_age).astimezone(tzutc())
         }
 
     print('---------------------------------')
