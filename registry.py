@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+######
+# github repository: https://github.com/andrey-pohilko/registry-cli
+# 
+# please read more details about the script, usage options and license info there
+######
+
 import requests
 import ast
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
