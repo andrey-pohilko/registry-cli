@@ -57,7 +57,15 @@ DEBUG = False
 class Requests:
 
     def request(self, method, url, **kwargs):
-        return requests.request(method, url, **kwargs)
+        s = requests.Session()
+
+        if args.cert and args.key:
+            s.cert = (args.cert.name, args.key.name)
+
+        if args.cacert:
+            s.verify = args.cacert.name
+
+        return s.request(method, url, **kwargs)
 
     def bearer_request(self, method, url, auth, **kwargs):
         global DEBUG
@@ -171,7 +179,7 @@ def get_auth_schemes(r,path):
 
     if DEBUG: print("[debug][funcname]: get_auth_schemes()")
 
-    try_oauth = requests.head('{0}{1}'.format(r.hostname,path), verify=not r.no_validate_ssl)
+    try_oauth = r.http.request('head', '{0}{1}'.format(r.hostname,path), verify=not r.no_validate_ssl)
 
     if 'Www-Authenticate' in try_oauth.headers:
         oauth = www_authenticate.parse(try_oauth.headers['Www-Authenticate'])
@@ -514,6 +522,30 @@ for more detail on garbage collection read here:
         const=True)
 
     parser.add_argument(
+        '--cacert',
+        help='Use this CA certificate to validate the registrys certificate',
+        action='store',
+        type=argparse.FileType('r'),
+        default=False,
+        metavar="CERT")
+
+    parser.add_argument(
+        '--cert',
+        help='Use this client certificate to connect to registry',
+        action='store',
+        default=False,
+        type=argparse.FileType('r'),
+        metavar="CERT")
+
+    parser.add_argument(
+        '--key',
+        help='Use this client certificate key to connect to registry',
+        action='store',
+        default=False,
+        type=argparse.FileType('r'),
+        metavar="KEY")
+
+    parser.add_argument(
         '--delete-all',
         help="Will delete all tags. Be careful with this!",
         const=True,
@@ -739,6 +771,10 @@ def main_loop(args):
     DEBUG = True if args.debug else False
 
     keep_last_versions = int(args.num)
+
+    if bool(args.cert) != bool(args.key):
+        print("Can't use only one of --cert and --key!")
+        sys.exit(1)
 
     if args.no_validate_ssl:
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
