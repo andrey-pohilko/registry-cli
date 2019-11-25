@@ -543,7 +543,7 @@ for more detail on garbage collection read here:
         help="Login and password for access to docker registry",
         required=False,
         metavar="USER:PASSWORD")
-
+    
     parser.add_argument(
         '-w', '--read-password',
         help="Read password from stdin (and prompt if stdin is a TTY); " +
@@ -553,13 +553,13 @@ for more detail on garbage collection read here:
         action='store_const',
         default=False,
         const=True)
-
+    
     parser.add_argument(
         '-r', '--host',
         help="Hostname for registry server, e.g. https://example.com:5000",
         required=True,
         metavar="URL")
-
+    
     parser.add_argument(
         '-d', '--delete',
         help=('If specified, delete all but last {0} tags '
@@ -567,7 +567,7 @@ for more detail on garbage collection read here:
         action='store_const',
         default=False,
         const=True)
-
+    
     parser.add_argument(
         '-n', '--num',
         help=('Set the number of tags to keep'
@@ -575,14 +575,14 @@ for more detail on garbage collection read here:
         default=CONST_KEEP_LAST_VERSIONS,
         nargs='?',
         metavar='N')
-
+    
     parser.add_argument(
         '--debug',
         help=('Turn debug output'),
         action='store_const',
         default=False,
         const=True)
-
+    
     parser.add_argument(
         '--dry-run',
         help=('If used in combination with --delete,'
@@ -590,102 +590,109 @@ for more detail on garbage collection read here:
         action='store_const',
         default=False,
         const=True)
-
+    
     parser.add_argument(
         '-i', '--image',
         help='Specify images and tags to list/delete',
         nargs='+',
         metavar="IMAGE:[TAG]")
-
+    
     parser.add_argument(
         '--images-like',
         nargs='+',
         help="List of images (regexp check) that will be handled",
         required=False,
         default=[])
-
+    
     parser.add_argument(
         '--keep-tags',
         nargs='+',
         help="List of tags that will be omitted from deletion if used in combination with --delete or --delete-all",
         required=False,
         default=[])
-
+    
     parser.add_argument(
         '--tags-like',
         nargs='+',
         help="List of tags (regexp check) that will be handled",
         required=False,
         default=[])
-
+    
     parser.add_argument(
         '--keep-tags-like',
         nargs='+',
         help="List of tags (regexp check) that will be omitted from deletion if used in combination with --delete or --delete-all",
         required=False,
         default=[])
-
+    
     parser.add_argument(
         '--no-validate-ssl',
         help="Disable ssl validation",
         action='store_const',
         default=False,
         const=True)
-
+    
     parser.add_argument(
         '--delete-all',
         help="Will delete all tags. Be careful with this!",
         const=True,
         default=False,
         action="store_const")
-
+    
     parser.add_argument(
         '--layers',
         help=('Show layers digests for all images and all tags'),
         action='store_const',
         default=False,
         const=True)
-
+    
     parser.add_argument(
         '--delete-by-hours',
         help=('Will delete all tags that are older than specified hours. Be careful!'),
         default=False,
         nargs='?',
         metavar='Hours')
-
+    
     parser.add_argument(
         '--keep-by-hours',
         help=('Will keep all tags that are newer than specified hours.'),
         default=False,
         nargs='?',
         metavar='Hours')
-
+    
     parser.add_argument(
         '--digest-method',
         help=('Use HEAD for standard docker registry or GET for NEXUS'),
         default='HEAD',
         metavar="HEAD|GET"
     )
-
+    
     parser.add_argument(
          '--auth-method',
          help=('Use POST or GET to get JWT tokens'),
          default='POST',
          metavar="POST|GET"
     )
-
+    
     parser.add_argument(
         '--order-by-date',
         help=('Orders images by date instead of by tag name.'
               'Useful if your tag names are not in a fixed order.'),
         action='store_true'
     )
-
+    
     parser.add_argument(
         '--thread-limit',
         nargs='?',
         help="Limit parallel execution to defined number. Default 30.",
         required=False)
+    
+    parser.add_argument(
+        '-f', '--force',
+        help='If specified force delete digests with other tags that reference them.',
+        action='store_const',
+        default=False,
+        const=True)
     return parser.parse_args(args)
 
 
@@ -699,8 +706,7 @@ def find_digests_to_delete(registry, image_name, tags_to_delete, tags_to_keep):
     return delete_tag_digests
 
 
-def delete_digests(registry, image_name,  dry_run, tags_to_delete, tags_to_keep):
-    digests_to_delete = find_digests_to_delete(registry, image_name, tags_to_delete, tags_to_keep)
+def delete_digests(registry, image_name,  dry_run, digests_to_delete):
     print('\n\n---------------------------------')
     if digests_to_delete:
         print("Start deleting digests.")
@@ -1042,7 +1048,7 @@ def main_loop(args):
             exit(0)
 
         print("\n\nStart filtering tags according to specified parameters:")
-        if args.tags_like and not args.delete_all:
+        if args.tags_like and not args.force:
             tag_list_to_keep.extend(get_tags_unlike(args.tags_like, all_tags_list))
         else:
             if args.keep_tags:
@@ -1058,7 +1064,10 @@ def main_loop(args):
             tags_list_to_delete = list(tags_list)
         else:
             ordered_tags_list = get_ordered_tags(registry, image_name, tags_list, order_by_date)
-            tags_list_to_delete = ordered_tags_list[:-keep_last_versions]
+            if not args.delete_all:
+                tags_list_to_delete = ordered_tags_list[:-keep_last_versions]
+            else:
+                tags_list_to_delete = ordered_tags_list
 
             # A manifest might be shared between different tags. Explicitly add those
             # tags that we want to preserve to the tag_list_to_keep list, to prevent
@@ -1095,11 +1104,8 @@ def main_loop(args):
                             print("    layer: {0}".format(
                                 layer['blobSum']))
 
-            print("\n\nDelete tags:")
-            print("---------------------------------")
-            delete_digests(
-                registry, image_name, args.dry_run,
-                tags_list_to_delete, tag_list_to_keep)
+            digests_to_delete = find_digests_to_delete(registry, image_name, tags_list_to_delete, tag_list_to_keep)
+            delete_digests(registry, image_name, args.dry_run, digests_to_delete)
 
 
 if __name__ == "__main__":
