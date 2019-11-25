@@ -2,7 +2,7 @@ mock
 coverage
 certifi
 chardet
-python-dateutil==2.8.0
+python-dateutil>=2.8.0
 idna>=2.5
 requests>=2.20.0
 urllib3>=1.23
