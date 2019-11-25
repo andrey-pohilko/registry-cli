@@ -539,12 +539,12 @@ class TestDeletion(unittest.TestCase):
         }
 
     def test_delete_tag_dry_run(self):
-        response = self.registry.delete_tag("image1", 'test_tag', True, [])
+        response = self.registry.delete_digest_for_tag("image1", 'test_tag', True, [])
         self.assertFalse(response)
 
     def test_delete_tag_ok(self):
         keep_tag_digests = ['DIGEST1', 'DIGEST2']
-        response = self.registry.delete_tag(
+        response = self.registry.delete_digest_for_tag(
             'image1', 'test_tag', False, keep_tag_digests)
         self.assertEqual(response, True)
         self.assertEqual(self.registry.http.request.call_count, 2)
@@ -558,7 +558,7 @@ class TestDeletion(unittest.TestCase):
         self.assertTrue("MOCK_DIGEST_HEADER" in keep_tag_digests)
 
     def test_delete_tag_ignored(self):
-        response = self.registry.delete_tag(
+        response = self.registry.delete_digest_for_tag(
             'image1', 'test_tag', False, ['MOCK_DIGEST_HEADER'])
         self.assertEqual(response, True)
         self.assertEqual(self.registry.http.request.call_count, 1)
@@ -572,7 +572,7 @@ class TestDeletion(unittest.TestCase):
 
     def test_delete_tag_no_digest(self):
         self.registry.http.reset_return_value(400, "")
-        response = self.registry.delete_tag('image1', 'test_tag', False, [])
+        response = self.registry.delete_digest_for_tag('image1', 'test_tag', False, [])
         self.assertFalse(response)
         self.assertEqual(self.registry.last_error, 400)
 
@@ -582,7 +582,7 @@ class TestDeleteTagsFunction(unittest.TestCase):
     def setUp(self):
         self.registry = Registry()
         self.delete_mock = MagicMock()
-        self.registry.delete_tag = self.delete_mock
+        self.registry.delete_digest_for_tag = self.delete_mock
         self.registry.http = MockRequests()
         self.registry.hostname = "http://testdomain.com"
         self.registry.http.reset_return_value(200, "MOCK_DIGEST")
