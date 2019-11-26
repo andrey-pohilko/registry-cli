@@ -292,13 +292,6 @@ class Registry:
 
         return tags_list
 
-    # def list_tags_like(self, tag_like, args_tags_like):
-    #     for tag_like in args_tags_like:
-    #         print("tag like: {0}".format(tag_like))
-    #         for tag in all_tags_list:
-    #             if re.search(tag_like, tag):
-    #                 print("Adding {0} to tags list".format(tag))
-
     def get_tag_digest(self, image_name, tag):
         image_headers = self.send("/v2/{0}/manifests/{1}".format(
             image_name, tag), method=self.digest_method)
@@ -313,6 +306,8 @@ class Registry:
         return tag_digest
 
     def get_keep_digests(self, image_name, tags_to_keep):
+        if not tags_to_keep:
+            return []
         keep_digests = []
         pool = ThreadPool(limit_threads(tags_to_keep))
         results = {}
@@ -353,6 +348,8 @@ class Registry:
         return keep_digests
 
     def get_delete_digests(self, image_name, tags_to_delete, digests_to_keep):
+        if not tags_to_delete:
+            return []
         delete_digests = []
         pool = ThreadPool(limit_threads(tags_to_delete))
         results = {}
@@ -562,8 +559,7 @@ for more detail on garbage collection read here:
     
     parser.add_argument(
         '-d', '--delete',
-        help=('If specified, delete all but last {0} tags '
-              'of all images').format(CONST_KEEP_LAST_VERSIONS),
+        help=('If specified, delete all but last {0} tags').format(CONST_KEEP_LAST_VERSIONS),
         action='store_const',
         default=False,
         const=True)
@@ -571,8 +567,8 @@ for more detail on garbage collection read here:
     parser.add_argument(
         '-n', '--num',
         help=('Set the number of tags to keep'
-              '({0} if not set)').format(CONST_KEEP_LAST_VERSIONS),
-        default=CONST_KEEP_LAST_VERSIONS,
+              '(Default: {0})').format(CONST_KEEP_LAST_VERSIONS),
+        default=None,
         nargs='?',
         metavar='N')
     
@@ -634,7 +630,7 @@ for more detail on garbage collection read here:
     
     parser.add_argument(
         '--delete-all',
-        help="Will delete all tags. Be careful with this!",
+        help="Will delete all tags. Overwrites keeping last 10 Tags.",
         const=True,
         default=False,
         action="store_const")
@@ -756,6 +752,7 @@ def delete_digests(registry, image_name,  dry_run, digests_to_delete):
     pool.join()
 
 
+# :TODO: This function dose make sense. But, it should only delete specified tags without deleting other tags with same digest reference.
 # def delete_tags(registry, image_name, dry_run, tags_to_delete, tags_to_keep):
 #
 #     keep_tag_digests = registry.get_keep_digests(image_name=image_name, tags_to_keep=tags_to_keep)
@@ -844,29 +841,6 @@ def get_tags(all_tags_list, image_name, tags_like):
 
     return result
 
-
-# def delete_tags_by_age(registry, image_name, dry_run, hours, tags_to_keep):
-#     image_tags = registry.list_tags(image_name)
-#     tags_to_delete = []
-#     print('---------------------------------')
-#     for tag in image_tags:
-#         image_config = registry.get_tag_config(image_name, tag)
-#
-#         if not image_config:
-#             print("tag not found")
-#             continue
-#
-#         image_age = registry.get_image_age(image_name, image_config)
-#
-#         if not image_age:
-#             print("timestamp not found")
-#             continue
-#
-#         if parse(image_age).astimezone(tzutc()) < dt.now(tzutc()) - timedelta(hours=int(hours)):
-#             print("will be deleted tag: {0} timestamp: {1}".format(
-#                 tag, image_age))
-#             tags_to_delete.append(tag)
-
     print('------------deleting-------------')
     delete_tags(registry, image_name, dry_run, tags_to_delete, tags_to_keep)
 
@@ -951,31 +925,29 @@ def main_loop(args):
     global MAX_THREADS
 
     # Check parameter combination.
+    if not args.num:
+        keep_last_versions = CONST_KEEP_LAST_VERSIONS
+    else:
+        keep_last_versions = int(args.num)
+
     error = False
+    if args.force and not args.tags_like:
+        print("Parameter --tags-like is not defined, ignoring --force."
+              "Because --force is additional parameter for --tags-like.")
     if args.num and args.delete_all:
         print("Combination of parameters --num and --delete-all is not allowed.")
-        error = True
-    if args.delete_all and (args.delete_by_hours or args.keep_by_hours):
-        print("Combination of parameters --delete-all and --delete-by-hours or --keep-by-hours is not allowed.")
         error = True
     if args.delete_by_hours and args.keep_by_hours:
         print("Combination of parameters --delete-by-hours and --keep-by-hours is not allowed."
               "Parameters --keep-by-hours is a substitute for --delete-by-hours.")
         error = True
-    if args.delete_all and (args.tags_like or args.keep_tags or args.keep_tags_like):
-        print("Combination of parameters --delete-all and --tags-like or --keep-tags or --keep-tags-like is not allowed.")
-        error = True
     if error:
         exit(1)
-    if args.force and not args.tags_like:
-        print("Parameter --tags-like is not defined, ignoring --force."
-              "Because --force is additional parameter for --tags-like.")
 
     DEBUG = True if args.debug else False
     if args.thread_limit:
         MAX_THREADS = int(args.thread_limit)
 
-    keep_last_versions = int(args.num)
     order_by_date = False
 
     delete = args.delete or args.delete_all or args.delete_by_hours

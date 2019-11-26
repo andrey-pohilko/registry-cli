@@ -92,7 +92,7 @@ Same as above but with layers
 ## Deleting images
 
 Keep only last 10 versions (useful for CI):
-Delete all tags of all images but keep last 10 tags (you can put this command to your build script
+Delete all tags of all images but keep last 10 tags for each image (you can put this command to your build script
 after building images)
 ```
   registry.py -l user:pass -r https://example.com:5000 --delete
@@ -110,16 +110,35 @@ The following command would delete all tags containing "snapshot-" and beginning
 ```
   registry.py -l user:pass -r https://example.com:5000 --delete --tags-like "snapshot-" "^stable-[0-9]{4}.*"
 ```
+NOTE: If one manifest of e.g. "snapshot-1" tag referenced by another tag that is not defined in "--tags-like" list, 
+then "snapshot-1" and all other references will be kept.
+
+As one manifest may be referenced by more than one tag, you may want to delete those tags as well.
+You can do this by adding parameter --force.
+
+```
+  registry.py -l user:pass -r https://example.com:5000 --delete --force --tags-like "snapshot-"
+```
 
 As one manifest may be referenced by more than one tag, you may add tags, whose manifests should NOT be deleted.
 A tag that would otherwise be deleted, but whose manifest references one of those "kept" tags, is spared for deletion.
-In the following case, all tags beginning with "snapshot-" will be deleted, save those whose manifest point to "stable" or "latest":
+In the following case, all tags beginning with "snapshot-" will be deleted, save only those whose manifest point to "stable" or "latest":
 
 ```
-  registry.py -l user:pass -r https://example.com:5000 --delete --tags-like "snapshot-" --keep-tags "stable" "latest"
+  registry.py -l user:pass -r https://example.com:5000 --delete --force --tags-like "snapshot-" --keep-tags "stable" "latest"
 ```
 The last parameter is also available as regexp option with `--keep-tags-like`.
 
+Delete all tags beginning with "snapshot-" for particular image (e.g. delete all ubuntu tags beginning with "snapshot-"):
+```
+  registry.py -l user:pass -r https://example.com:5000 -i ubuntu --delete-all --tags-like "snapshot-"
+```
+
+Delete all tags beginning with "snapshot-" for ubuntu image, 
+including all tags that refer to the same digests as tags with "snapshot-" in there name.:
+```
+  registry.py -l user:pass -r https://example.com:5000 -i ubuntu --delete-all --force --tags-like "snapshot-"
+```
 
 Delete all tags for particular image (e.g. delete all ubuntu tags):
 ```
@@ -136,10 +155,6 @@ Delete all tags by age in hours for the particular image (e.g. older than 24 hou
   registry.py -r https://example.com:5000 -i api-docs-origin/master --dry-run --delete-by-hours 24 --keep-tags c59c02c25f023263fd4b5d43fc1ff653f08b3d4x --keep-tags-like late
 ```
 
-Note that deleting by age will not prevent more recent tags from being deleted if there are more than 10 (or specified `--num` value). In order to keep all tags within a designated period, use the `--keep-by-hours` flag:
-```
-  registry.py -r https://example.com:5000 --dry-run --delete --keep-by-hours 72 --keep-tags-like latest
-```
 ## Disable ssl verification
 
 If you are using docker registry with a self signed ssl certificate, you can disable ssl verification:
