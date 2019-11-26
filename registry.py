@@ -655,7 +655,8 @@ for more detail on garbage collection read here:
     
     parser.add_argument(
         '--keep-by-hours',
-        help=('Will keep all tags that are newer than specified hours.'),
+        help=('Will keep all tags that are newer than specified hours.'
+              'Do not use in combination with --delete-by-hours. Parameters control the same behavior.'),
         default=False,
         nargs='?',
         metavar='Hours')
@@ -684,7 +685,7 @@ for more detail on garbage collection read here:
     parser.add_argument(
         '--thread-limit',
         nargs='?',
-        help="Limit parallel execution to defined number. Default 30.",
+        help='Limit parallel execution to defined number. Default 30.',
         required=False)
     
     parser.add_argument(
@@ -948,6 +949,27 @@ def get_ordered_tags(registry, image_name, tags_list, order_by_date=False):
 def main_loop(args):
     global DEBUG
     global MAX_THREADS
+
+    # Check parameter combination.
+    error = False
+    if args.num and args.delete_all:
+        print("Combination of parameters --num and --delete-all is not allowed.")
+        error = True
+    if args.delete_all and (args.delete_by_hours or args.keep_by_hours):
+        print("Combination of parameters --delete-all and --delete-by-hours or --keep-by-hours is not allowed.")
+        error = True
+    if args.delete_by_hours and args.keep_by_hours:
+        print("Combination of parameters --delete-by-hours and --keep-by-hours is not allowed."
+              "Parameters --keep-by-hours is a substitute for --delete-by-hours.")
+        error = True
+    if args.delete_all and (args.tags_like or args.keep_tags or args.keep_tags_like):
+        print("Combination of parameters --delete-all and --tags-like or --keep-tags or --keep-tags-like is not allowed.")
+        error = True
+    if error:
+        exit(1)
+    if args.force and not args.tags_like:
+        print("Parameter --tags-like is not defined, ignoring --force."
+              "Because --force is additional parameter for --tags-like.")
 
     DEBUG = True if args.debug else False
     if args.thread_limit:
