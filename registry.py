@@ -428,8 +428,8 @@ class Registry:
             status = False
 
         elif tag_digest is None:
-            reason = "Digest not found for tag {1} ".format(tag)
             status = False
+            reason = "Digest not found for tag {0} ".format(tag)
 
         elif dry_run:
             status = True
