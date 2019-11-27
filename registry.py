@@ -330,10 +330,10 @@ class Registry:
         if success:
             print('\n\nFound digest to preserve:')
             print('---------------------------------')
-            for digest in digests_to_keep:
+            for digest in sorted(digests_to_keep):
                 print(digest)
             print('\nDigest references:')
-            for message in success:
+            for message in sorted(success):
                 print(message)
 
         if failed:
@@ -377,18 +377,18 @@ class Registry:
         if ignored:
             print("\n\nFollowing digests can not be deleted:")
             print('---------------------------------')
-            for digest in ignored_digests:
+            for digest in sorted(ignored_digests):
                 print(digest)
             print("\nReasons:")
-            for message in ignored:
+            for message in sorted(ignored):
                 print(message)
         if success:
             print("\n\nFollowing digests shall be deleted:")
             print('---------------------------------')
-            for digest in digests_to_delte:
+            for digest in sorted(digests_to_delte):
                 print(digest)
             print("\nEvaluation:")
-            for message in success:
+            for message in sorted(success):
                 print(message)
         if failed:
             print("\nWhile running search following errors occurred:")
@@ -733,18 +733,18 @@ def delete_digests(registry, image_name,  dry_run, digests_to_delete):
             failed_digests.append(digest)
 
     if deleted_digests:
-        for message in success:
+        for message in sorted(success):
             print(message)
         if not dry_run:
             print("\nDeleted digests:")
             print('---------------------------------')
-            for digest in deleted_digests:
+            for digest in sorted(deleted_digests):
                 print(digest)
 
     if failed_digests:
         print("\nFailed to delete digests:")
         print('---------------------------------')
-        for digest in failed_digests:
+        for digest in sorted(failed_digests):
             print(digest)
         print('Errors:')
         for message in failed:
