@@ -226,8 +226,3 @@ Testing started at 9:31 AM ...
 error 400
 ```
 this is ok, because test simulates invalid inputs also.
-
-# Contact
-
-Please feel free to contact me at anoxis@gmail.com if you wish to add more functionality
-or want to contribute.
