@@ -843,11 +843,11 @@ def get_tags(all_tags_list, image_name, tags_like):
 
     return result
 
-    print('------------deleting-------------')
-    delete_tags(registry, image_name, dry_run, tags_to_delete, tags_to_keep)
-
 
 def get_newer_tags(registry, image_name, hours, tags_list):
+    if not tags_list:
+        return None
+
     def newer(tag):
         image_config = registry.get_tag_config(image_name, tag)
         if not image_config:
@@ -875,6 +875,8 @@ def get_newer_tags(registry, image_name, hours, tags_list):
 
 
 def get_datetime_tags(registry, image_name, tags_list):
+    if not tags_list:
+        return None
     def newer(tag):
         image_config = registry.get_tag_config(image_name, tag)
         if not image_config:
@@ -911,6 +913,8 @@ def find_images_like(image_list, regexp_list):
 
 
 def get_ordered_tags(registry, image_name, tags_list, order_by_date=False):
+    if not tags_list:
+        return tags_list
     if order_by_date:
         tags_date = get_datetime_tags(registry, image_name, tags_list)
         sorted_tags_by_date = sorted(
@@ -1022,7 +1026,10 @@ def main_loop(args):
             tags_list = get_ordered_tags(registry=registry, image_name=image_name, tags_list=all_tags_list, order_by_date=order_by_date)
             image_tags_header = "All tags in image repository \"{0}\":".format(image_name)
 
-        if tags_list:
+        if not tags_list:
+            print("\n\nNo tags with digest qualified for removal found in image repository \"{0}\":".format(image_name))
+            continue
+        else:
             print(image_tags_header)
             print("---------------------------------")
             for tag in tags_list:
