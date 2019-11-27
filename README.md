@@ -34,7 +34,7 @@ in all commands below, e.g.
     docker run --rm anoxis/registry-cli -r http://example.com:5000
 ```
 
-Note: when you use the docker image and registry on the same computer (registry is on localhost), then due to internal network created by docker you have to link to the registry's network and refer registry container by its name, not localhost.
+NOTE: when you use the docker image and registry on the same computer (registry is on localhost), then due to internal network created by docker you have to link to the registry's network and refer registry container by its name, not localhost.
 E.g. your registry container is named "registry",
 then the command to launch registry-cli would be
 ```bash

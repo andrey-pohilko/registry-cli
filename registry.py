@@ -308,7 +308,7 @@ class Registry:
     def get_keep_digests(self, image_name, tags_to_keep):
         if not tags_to_keep:
             return []
-        keep_digests = []
+        digests_to_keep = []
         pool = ThreadPool(limit_threads(tags_to_keep))
         results = {}
         success = []
@@ -324,13 +324,13 @@ class Registry:
                 failed.append("Digest does not exist for tag {0} in image {1}. Ignore here.".format(tag, image_name, ))
             else:
                 success.append("Digest {0} referred by tag {1}".format(digest, tag))
-                if digest not in keep_digests:
-                    keep_digests.append(digest)
+                if digest not in digests_to_keep:
+                    digests_to_keep.append(digest)
 
         if success:
             print('\n\nFound digest to preserve:')
             print('---------------------------------')
-            for digest in keep_digests:
+            for digest in digests_to_keep:
                 print(digest)
             print('\nDigest references:')
             for message in success:
@@ -345,12 +345,12 @@ class Registry:
         pool.close()
         pool.join()
 
-        return keep_digests
+        return digests_to_keep
 
     def get_delete_digests(self, image_name, tags_to_delete, digests_to_keep):
         if not tags_to_delete:
             return []
-        delete_digests = []
+        digests_to_delte = []
         pool = ThreadPool(limit_threads(tags_to_delete))
         results = {}
         success = []
@@ -371,22 +371,23 @@ class Registry:
                 ignored.append("Digest {0} for tag {1} is referenced by another tag that should be kept.".format(digest, tag))
             else:
                 success.append("Digest {0} for tag {1} can be deleted.".format(digest, tag))
-                if digest not in delete_digests:
-                    delete_digests.append(digest)
+                if digest not in digests_to_delte:
+                    digests_to_delte.append(digest)
 
         if ignored:
             print("\n\nFollowing digests can not be deleted:")
             print('---------------------------------')
             for digest in ignored_digests:
                 print(digest)
+            print("\nReasons:")
             for message in ignored:
                 print(message)
         if success:
-            print("\n\nFollowing digests will be deleted:")
+            print("\n\nFollowing digests shall be deleted:")
             print('---------------------------------')
-            for digest in delete_digests:
+            for digest in digests_to_delte:
                 print(digest)
-            print("\nReasons:")
+            print("\nEvaluation:")
             for message in success:
                 print(message)
         if failed:
@@ -398,7 +399,7 @@ class Registry:
         pool.close()
         pool.join()
 
-        return delete_digests
+        return digests_to_delte
 
     def delete_digest(self, image_name, digest, dry_run):
         if dry_run:
@@ -1071,22 +1072,25 @@ def main_loop(args):
             tag_list_to_keep.extend(tags_list_to_keep)
 
         tag_list_to_keep = list(set(tag_list_to_keep))  # Eliminate duplicates
-        if tag_list_to_keep:
-            print("\n\nTags to keep in image repository \"{0}\":".format(image_name))
-            print("---------------------------------")
-            for tag in tag_list_to_keep:
-                print("  tag: {0}".format(tag))
-                if args.layers:
-                    for layer in registry.list_tag_layers(image_name, tag):
-                        if 'size' in layer:
-                            print("    layer: {0}, size: {1}".format(
-                                layer['digest'], layer['size']))
-                        else:
-                            print("    layer: {0}".format(
-                                layer['blobSum']))
 
-        if tags_list_to_delete:
-            print("\n\nTags to delete in image repository \"{0}\":".format(image_name))
+        if not tags_list_to_delete:
+            print("\n\nNo tags with digest qualified for removal found in image repository \"{0}\":".format(image_name))
+        else:
+            if tag_list_to_keep:
+                print("\n\n{0} tags shall be kept in image repository \"{1}\":".format(len(tag_list_to_keep), image_name))
+                print("---------------------------------")
+                for tag in tag_list_to_keep:
+                    print("  tag: {0}".format(tag))
+                    if args.layers:
+                        for layer in registry.list_tag_layers(image_name, tag):
+                            if 'size' in layer:
+                                print("    layer: {0}, size: {1}".format(
+                                    layer['digest'], layer['size']))
+                            else:
+                                print("    layer: {0}".format(
+                                    layer['blobSum']))
+
+            print("\n\n{0} tags can be removed from image repository \"{1}\":".format(len(tags_list_to_delete), image_name))
             print("---------------------------------")
             for tag in tags_list_to_delete:
                 print("  tag: {0}".format(tag))
@@ -1098,7 +1102,8 @@ def main_loop(args):
                         else:
                             print("    layer: {0}".format(
                                 layer['blobSum']))
-
+            print("\n\nChecking digest relationships:")
+            print("---------------------------------")
             digests_to_delete = find_digests_to_delete(registry, image_name, tags_list_to_delete, tag_list_to_keep)
             delete_digests(registry, image_name, args.dry_run, digests_to_delete)
 

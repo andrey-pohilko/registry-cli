@@ -931,6 +931,7 @@ class TestArgParser(unittest.TestCase):
         self.assertEqual(args.digest_method, "HEAD")
         self.assertFalse(args.order_by_date)
 
+# :TODO: Test main_loop with different registry mocks.
 
 if __name__ == '__main__':
     unittest.main()
