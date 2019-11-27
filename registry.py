@@ -419,38 +419,39 @@ class Registry:
 
         return status, reason
 
-    def delete_digest_for_tag(self, image_name, tag, dry_run, tag_digests_to_ignore):
-        tag_digest = self.get_tag_digest(image_name, tag)
-
-        if tag_digest in tag_digests_to_ignore:
-            reason = "Digest {0} for tag {1} is referenced by another tag or has already been deleted and will be ignored".format(
-                tag_digest, tag)
-            status = False
-
-        elif tag_digest is None:
-            status = False
-            reason = "Digest not found for tag {0} ".format(tag)
-
-        elif dry_run:
-            status = True
-            reason = "Would delete tag {0}".format(tag)
-
-        else:
-            print("Deleting tag: \"{0}\".format(tag)")
-            delete_result = self.send("/v2/{0}/manifests/{1}".format(image_name, tag_digest),
-                                      method="DELETE")
-
-            if delete_result is None:
-                reason = "failed, error: {0}".format(self.last_error)
-                reason = reason + "\n  " + get_error_explanation("delete_tag", self.last_error)
-                status = False
-            else:
-                status = True
-                reason = "Deleted tag {0}".format(tag)
-
-        tag_digests_to_ignore.append(tag_digest)
-
-        return status, reason
+    # # This function is not used anymore!
+    # def delete_digest_for_tag(self, image_name, tag, dry_run, tag_digests_to_ignore):
+    #     tag_digest = self.get_tag_digest(image_name, tag)
+    #
+    #     if tag_digest in tag_digests_to_ignore:
+    #         reason = "Digest {0} for tag {1} is referenced by another tag or has already been deleted and will be ignored".format(
+    #             tag_digest, tag)
+    #         status = False
+    #
+    #     elif tag_digest is None:
+    #         status = False
+    #         reason = "Digest not found for tag {0} ".format(tag)
+    #
+    #     elif dry_run:
+    #         status = True
+    #         reason = "Would delete tag {0}".format(tag)
+    #
+    #     else:
+    #         print("Deleting tag: \"{0}\".format(tag)")
+    #         delete_result = self.send("/v2/{0}/manifests/{1}".format(image_name, tag_digest),
+    #                                   method="DELETE")
+    #
+    #         if delete_result is None:
+    #             reason = "failed, error: {0}".format(self.last_error)
+    #             reason = reason + "\n  " + get_error_explanation("delete_tag", self.last_error)
+    #             status = False
+    #         else:
+    #             status = True
+    #             reason = "Deleted tag {0}".format(tag)
+    #
+    #     tag_digests_to_ignore.append(tag_digest)
+    #
+    #     return status, reason
 
     def list_tag_layers(self, image_name, tag):
         layers_result = self.send("/v2/{0}/manifests/{1}".format(
@@ -478,7 +479,7 @@ class Registry:
 
         json_result = json.loads(config_result.text)
         if json_result['schemaVersion'] == 1:
-            print("Docker schemaVersion 1 isn't supported for deleting by age now")
+            print("Docker schemaVersion 1 isn't supported for deleting by age.")
             sys.exit(1)
         else:
             tag_config = json_result['config']

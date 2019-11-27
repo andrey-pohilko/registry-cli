@@ -85,7 +85,7 @@ class TestParseLogin(unittest.TestCase):
         self.assertEqual(password, "pass:word")
         self.assertEqual(self.registry.last_error, None)
 
-    # this test becomes reduntant
+    # this test becomes redundant
     def test_login_args_no_colon(self):
         (username, password) = self.registry.parse_login("username/password")
         self.assertEqual(username, None)
@@ -156,7 +156,9 @@ class TestRegistrySend(unittest.TestCase):
                                                       headers=self.registry.HEADERS,
                                                       verify=True)
 
+
 class TestGetErrorExplanation(unittest.TestCase):
+
     def test_get_tag_digest_404(self):
         self.assertEqual(get_error_explanation("delete_tag", "405"),
                          'You might want to set REGISTRY_STORAGE_DELETE_ENABLED: "true" in your registry')
@@ -307,7 +309,6 @@ class TestListDigest(unittest.TestCase):
         self.assertEqual(
             response, 'sha256:85295b0e7456a8fbbc886722b483f87f2bff553fa0beeaf37f5d807aff7c1e52')
         self.assertEqual(self.registry.last_error, None)
-
 
     def test_invalid_status_code(self):
         self.registry.http.reset_return_value(400)
@@ -538,48 +539,72 @@ class TestDeletion(unittest.TestCase):
             'X-Content-Type-Options': 'nosniff'
         }
 
-    def test_delete_tag_dry_run(self):
-        status, response = self.registry.delete_digest_for_tag("image1", 'test_tag', True, [])
+    def test_delete_digests_dry_run(self):
+        status, response = self.registry.delete_digest("image1", "MOCK_DIGEST", True)
         self.assertTrue(status)
-        self.assertEqual(response, "Would delete tag test_tag")
+        self.assertEqual(response, "Would delete digest {0}".format("MOCK_DIGEST"))
+
+    def test_tag_digests(self):
+        digests_to_delete = find_digests_to_delete(self.registry, "image1", tags_to_delete=["1"], tags_to_keep=[])
+        delete_digests(self.registry, "image1", False, digests_to_delete)
+        calls = [
+            call(
+                'HEAD',
+                'http://testdomain.com/v2/image1/manifests/1',
+                auth=(None, None),
+                headers=self.registry.HEADERS,
+                verify=True
+            ),
+            call(
+                "DELETE",
+                "http://testdomain.com/v2/image1/manifests/MOCK_DIGEST_HEADER",
+                auth=(None, None),
+                headers=self.registry.HEADERS,
+                verify=True
+            )
+        ]
+        self.registry.http.request.assert_has_calls(calls, any_order=True)
+        self.assertEqual(self.registry.http.request.call_count, 2)
+        self.assertTrue("MOCK_DIGEST_HEADER" in digests_to_delete)
 
     def test_delete_tag_ok(self):
-        keep_tag_digests = ['DIGEST1', 'DIGEST2']
-        status, response = self.registry.delete_digest_for_tag(
-            'image1', 'test_tag', False, keep_tag_digests)
+        status, response = self.registry.delete_digest("image1", "MOCK_DIGEST", False)
         self.assertEqual(status, True)
-        self.assertEqual(self.registry.http.request.call_count, 2)
-        self.registry.http.request.assert_called_with(
-            "DELETE",
-            "http://testdomain.com/v2/image1/manifests/MOCK_DIGEST_HEADER",
-            auth=(None, None),
-            headers=self.registry.HEADERS,
-            verify=True
-        )
-        self.assertTrue("MOCK_DIGEST_HEADER" in keep_tag_digests)
+        self.assertEqual(response, "Deleted digest {0}".format("MOCK_DIGEST"))
 
     def test_delete_tag_ignored(self):
-        keep_tag_digests = ['MOCK_DIGEST_HEADER']
-        status, response = self.registry.delete_digest_for_tag(
-            'image1', 'test_tag', False, keep_tag_digests)
-        self.assertFalse(status)
-        self.assertEqual(self.registry.http.request.call_count, 1)
-        self.registry.http.request.assert_called_with(
-            "HEAD",
-            "http://testdomain.com/v2/image1/manifests/test_tag",
-            auth=(None, None),
-            headers=self.registry.HEADERS,
-            verify=True
-        )
+
+        digests_to_delete = find_digests_to_delete(self.registry, "image1", tags_to_delete=["test_tag"], tags_to_keep=["test_tag_ignore"])
+        delete_digests(self.registry, "image1", False, digests_to_delete)
+
+        calls = [
+            call(
+                "HEAD",
+                "http://testdomain.com/v2/image1/manifests/test_tag",
+                auth=(None, None),
+                headers=self.registry.HEADERS,
+                verify=True
+            ),
+            call(
+                "HEAD",
+                "http://testdomain.com/v2/image1/manifests/test_tag_ignore",
+                auth=(None, None),
+                headers=self.registry.HEADERS,
+                verify=True
+            )
+        ]
+        self.registry.http.request.assert_has_calls(calls, any_order=True)
+        self.assertEqual(self.registry.http.request.call_count, 2)
 
     def test_delete_tag_no_digest(self):
         self.registry.http.reset_return_value(400, "")
-        status, response = self.registry.delete_digest_for_tag('image1', 'test_tag', False, [])
+        status, response = self.registry.delete_digest('image1', 'MOCK_DIGEST', False)
         self.assertFalse(status)
         self.assertEqual(self.registry.last_error, 400)
 
 
 class TestDeleteDigests(unittest.TestCase):
+
     def setUp(self):
         self.registry = Registry()
         self.delete_digest_mock = MagicMock(return_value=(True, "Deleted"))
@@ -606,14 +631,11 @@ class TestDeleteDigests(unittest.TestCase):
 
 
 class TestFindDigestsToDelete(unittest.TestCase):
+
     def setUp(self):
         self.registry = Registry()
         self.get_tag_digest_mock = MagicMock(return_value=("DIGEST_MOCK"))
         self.registry.get_tag_digest = self.get_tag_digest_mock
-        #self.get_keep_digests_mock = MagicMock()
-        #self.get_delete_digests_mock = MagicMock()
-        #self.registry.get_keep_digests = self.get_keep_digests_mock
-        #self.registry.get_delete_digests = self.get_delete_digests_mock
         self.registry.http = MockRequests()
         self.registry.hostname = "http://testdomain.com"
         self.registry.http.reset_return_value(200, "MOCK_DIGEST")
@@ -646,12 +668,12 @@ class TestFindDigestsToDelete(unittest.TestCase):
         self.get_tag_digest_mock.assert_has_calls(calls, any_order=True)
         self.assertEqual(len(self.get_tag_digest_mock.mock_calls), 3)
 
-@unittest.skip
+
 class TestDeleteTagsByAge(unittest.TestCase):
+
     def setUp(self):
         self.registry = Registry()
         self.registry.http = MockRequests()
-
         self.get_tag_config_mock = MagicMock(return_value={'mediaType': 'application/vnd.docker.container.image.v1+json', 'size': 12953,
                                                            'digest': 'sha256:8d71dfbf239c0015ad66993d55d3954cee2d52d86f829fdff9ccfb9f23b75aa8'})
         self.registry.get_tag_config = self.get_tag_config_mock
@@ -660,78 +682,52 @@ class TestDeleteTagsByAge(unittest.TestCase):
         self.registry.get_image_age = self.get_image_age_mock
         self.list_tags_mock = MagicMock(return_value=["image"])
         self.registry.list_tags = self.list_tags_mock
-        self.get_tag_digest_mock = MagicMock()
-        self.registry.get_tag_digest = self.get_tag_digest_mock
         self.registry.http = MockRequests()
         self.registry.hostname = "http://testdomain.com"
         self.registry.http.reset_return_value(200, "MOCK_DIGEST")
 
-    @patch('registry.Registry.get_keep_digests') #, 'registry.Registry.get_delete_digests')
-    def test_delete_tags_by_age_no_keep(self, get_keep_digests_patched): #, get_delete_digests_patched):
+    @patch('registry.Registry.get_delete_digests')
+    @patch('registry.Registry.get_keep_digests')
+    def test_find_digests_to_delete_tags_by_age_no_keep(self, get_keep_digests_patched, get_delete_digests_patched):
+        get_keep_digests_patched.return_value = []
         all_tags_list = self.registry.list_tags("imagename")
-        digests_to_delete = find_digests_to_delete(registry=self.registry, image_name="imagename",
-                                                   tags_to_delete=all_tags_list, tags_to_keep=[])
-        delete_digests(registry=self.registry, image_name="imagename", dry_run=False,
-                       digests_to_delete=digests_to_delete)
+        tags_to_keep = get_newer_tags(self.registry, "imagename", 24, all_tags_list)
+        find_digests_to_delete(registry=self.registry, image_name="imagename",
+                               tags_to_delete=all_tags_list, tags_to_keep=tags_to_keep)
+
         self.list_tags_mock.assert_called_with("imagename")
         self.get_tag_config_mock.assert_called_with("imagename", "image")
-        get_keep_digests_patched.assert_called_with("imagename", [])
-        #get_delete_digests_patched.assert_called_with("imagename", all_tags_list)
+        get_keep_digests_patched.assert_called_with(image_name="imagename", tags_to_keep=[])
+        get_delete_digests_patched.assert_called_with(image_name="imagename", tags_to_delete=['image'], digests_to_keep=[])
 
-    @unittest.skip
-    @patch('registry.delete_digests')
-    def test_delete_tags_by_age_no_keep_with_non_utc_value(self, delete_digests_patched):
+    @patch('registry.Registry.get_delete_digests')
+    @patch('registry.Registry.get_keep_digests')
+    def test_find_digests_to_delete_by_age_no_keep_with_non_utc_value(self, get_keep_digests_patched, get_delete_digests_patched):
+        get_keep_digests_patched.return_value = []
         self.registry.get_image_age.return_value = "2017-12-27T12:47:33.511765448+02:00"
         all_tags_list = self.registry.list_tags("imagename")
         tags_to_keep = get_newer_tags(self.registry, "imagename", 24, all_tags_list)
-        digests_to_delete = find_digests_to_delete(registry=self.registry, image_name="imagename",
-                                                   tags_to_delete=all_tags_list, tags_to_keep=tags_to_keep)
-        delete_digests(registry=self.registry, image_name="imagename", dry_run=False,
-                       digests_to_delete=digests_to_delete)
-        self.list_tags_mock.assert_called_with(
-            "imagename"
-        )
+        find_digests_to_delete(registry=self.registry, image_name="imagename",
+                               tags_to_delete=all_tags_list, tags_to_keep=tags_to_keep)
         self.list_tags_mock.assert_called_with("imagename")
         self.get_tag_config_mock.assert_called_with("imagename", "image")
-        delete_digests_patched.assert_called_with(registry=self.registry,
-                                                  image_name="imagename", dry_run=False,
-                                                  digests_to_delete=[])
+        get_keep_digests_patched.assert_called_with(image_name="imagename", tags_to_keep=[])
+        get_delete_digests_patched.assert_called_with(image_name="imagename", tags_to_delete=['image'], digests_to_keep=[])
 
-    @unittest.skip
-    @patch('registry.delete_digests')
-    def test_delete_tags_by_age_keep_tags(self, delete_digests_patched):
+    @patch('registry.Registry.get_delete_digests')
+    @patch('registry.Registry.get_keep_digests')
+    def test_find_digests_to_delete_by_age_keep_tags_by_age(self, get_keep_digests_patched, get_delete_digests_patched):
+        get_keep_digests_patched.return_value = ["MOCK_DIGEST"]
         all_tags_list = self.registry.list_tags("imagename")
-        digests_to_keep = get_newer_tags(self.registry, "imagename", 24, all_tags_list)
-        digests_to_keep.extend(get_tags(all_tags_list=all_tags_list,image_name="imagename",tags_like="latest"))
-        digests_to_delete = find_digests_to_delete(registry=self.registry, image_name="imagename",
-                                                   tags_to_delete=all_tags_list, tags_to_keep=digests_to_keep)
-        delete_digests(registry=self.registry, image_name="imagename", dry_run=False,
-                       digests_to_delete=digests_to_delete)
-        self.list_tags_mock.assert_called_with(
-            "imagename"
-        )
-        self.list_tags_mock.assert_called_with("imagename")
-        self.get_tag_config_mock.assert_called_with("imagename", "image")
-        delete_digests_patched.assert_called_with(
-            registry=self.registry, image_name="imagename", dry_run=False, digests_to_delete=[])
+        self.registry.get_image_age.return_value = str(datetime.now(tz=tzutc()))
+        tags_to_keep = get_newer_tags(self.registry, "imagename", 24, all_tags_list)
+        find_digests_to_delete(registry=self.registry, image_name="imagename",
+                               tags_to_delete=all_tags_list, tags_to_keep=tags_to_keep)
 
-    @unittest.skip
-    @patch('registry.delete_digests')
-    def test_delete_tags_by_age_dry_run(self, delete_digests_patched):
-        all_tags_list = self.registry.list_tags("imagename")
-        digests_to_keep = get_newer_tags(self.registry, "imagename", 24, all_tags_list)
-        digests_to_keep.extend(get_tags(all_tags_list=all_tags_list, image_name="imagename", tags_like="latest"))
-        digests_to_delete = find_digests_to_delete(registry=self.registry, image_name="imagename",
-                                                   tags_to_delete=all_tags_list, tags_to_keep=digests_to_keep)
-        delete_digests(registry=self.registry, image_name="imagename", dry_run=False,
-                       digests_to_delete=digests_to_delete)
-        self.list_tags_mock.assert_called_with(
-            "imagename"
-        )
         self.list_tags_mock.assert_called_with("imagename")
         self.get_tag_config_mock.assert_called_with("imagename", "image")
-        delete_digests_patched.assert_called_with(
-            self.registry, "imagename", True, ["image"], ["latest"])
+        get_keep_digests_patched.assert_called_with(image_name="imagename", tags_to_keep=['image'])
+        get_delete_digests_patched.assert_called_with(image_name="imagename", tags_to_delete=['image'], digests_to_keep=["MOCK_DIGEST"])
 
 
 class TestGetNewerTags(unittest.TestCase):
@@ -809,6 +805,7 @@ class TestGetDatetimeTags(unittest.TestCase):
 
 
 class TestGetOrderedTags(unittest.TestCase):
+
     def setUp(self):
         self.tags = ["e61d48b", "ff24a83", "ddd514c", "f4ba381", "9d5fab2"]
 
