@@ -308,6 +308,8 @@ class Registry:
     def get_keep_digests(self, image_name, tags_to_keep):
         if not tags_to_keep:
             return []
+        print('\n---------------------------------')
+        print("Getting digests for tags to keep:")
         digests_to_keep = []
         pool = ThreadPool(limit_threads(tags_to_keep))
         results = {}
@@ -315,7 +317,7 @@ class Registry:
         failed = []
 
         for tag in tags_to_keep:
-            print("Getting digest for tag {0}".format(tag))
+            print("  getting digest for tag: {0}".format(tag))
             results[tag] = pool.apply_async(self.get_tag_digest, args=(image_name, tag))
         for tag in results.keys():
             result = results.get(tag)
@@ -328,8 +330,8 @@ class Registry:
                     digests_to_keep.append(digest)
 
         if success:
-            print('\n\nFound digest to preserve:')
-            print('---------------------------------')
+            print('\n---------------------------------')
+            print('Found digest to preserve:')
             for digest in sorted(digests_to_keep):
                 print(digest)
             print('\nDigest references:')
@@ -337,10 +339,10 @@ class Registry:
                 print(message)
 
         if failed:
-            print('\nWhile running search following errors occurred:')
+            print('\n---------------------------------')
+            print('While running search following errors occurred:')
             for message in failed:
                 print(message)
-            print('---------------------------------')
 
         pool.close()
         pool.join()
@@ -350,6 +352,8 @@ class Registry:
     def get_delete_digests(self, image_name, tags_to_delete, digests_to_keep):
         if not tags_to_delete:
             return []
+        print('\n---------------------------------')
+        print("Getting digests for tags to delete:")
         digests_to_delte = []
         pool = ThreadPool(limit_threads(tags_to_delete))
         results = {}
@@ -359,7 +363,7 @@ class Registry:
         ignored = []
 
         for tag in tags_to_delete:
-            print("Getting digest for tag {0}".format(tag))
+            print("  getting digest for tag: {0}".format(tag))
             results[tag] = pool.apply_async(self.get_tag_digest, args=(image_name, tag))
         for tag in results.keys():
             result = results.get(tag)
@@ -375,24 +379,24 @@ class Registry:
                     digests_to_delte.append(digest)
 
         if ignored:
-            print("\n\nFollowing digests can not be deleted:")
-            print('---------------------------------')
+            print('\n---------------------------------')
+            print("Following digests can not be deleted:")
             for digest in sorted(ignored_digests):
                 print(digest)
             print("\nReasons:")
             for message in sorted(ignored):
                 print(message)
         if success:
-            print("\n\nFollowing digests shall be deleted:")
-            print('---------------------------------')
+            print('\n---------------------------------')
+            print("Following digests shall be deleted:")
             for digest in sorted(digests_to_delte):
                 print(digest)
             print("\nEvaluation:")
             for message in sorted(success):
                 print(message)
         if failed:
-            print("\nWhile running search following errors occurred:")
-            print('---------------------------------')
+            print('\n---------------------------------')
+            print("While running search following errors occurred:")
             for message in failed:
                 print(message)
 
@@ -696,23 +700,19 @@ for more detail on garbage collection read here:
 
 
 def find_digests_to_delete(registry, image_name, tags_to_delete, tags_to_keep):
-    print('---------------------------------')
-    print("Getting digests for tags to keep:")
+
     keep_tag_digests = registry.get_keep_digests(image_name=image_name, tags_to_keep=tags_to_keep)
-    print('---------------------------------')
-    print("Getting digests for tags to delete:")
     delete_tag_digests = registry.get_delete_digests(image_name=image_name, tags_to_delete=tags_to_delete, digests_to_keep=keep_tag_digests)
     return delete_tag_digests
 
 
 def delete_digests(registry, image_name,  dry_run, digests_to_delete):
-    print('\n\n---------------------------------')
+    print('\n---------------------------------')
     if digests_to_delete:
-        print("Start deleting digests.")
+        print("Start deleting digests:")
     else:
-        print("Could not find any digest that can be deleted!")
+        print("Could not find any digest that can be deleted in image repository {0}.".format(image_name))
         return
-    print('---------------------------------')
 
     pool = ThreadPool(len(digests_to_delete))
     results = {}
@@ -736,20 +736,19 @@ def delete_digests(registry, image_name,  dry_run, digests_to_delete):
         for message in sorted(success):
             print(message)
         if not dry_run:
-            print("\nDeleted digests:")
-            print('---------------------------------')
+            print("\n---------------------------------")
+            print("Deleted digests:")
             for digest in sorted(deleted_digests):
                 print(digest)
 
     if failed_digests:
+        print("\n---------------------------------")
         print("\nFailed to delete digests:")
-        print('---------------------------------')
         for digest in sorted(failed_digests):
             print(digest)
-        print('Errors:')
+        print('\nErrors:')
         for message in failed:
             print(message)
-
     pool.close()
     pool.join()
 
@@ -866,7 +865,6 @@ def get_newer_tags(registry, image_name, hours, tags_list):
                 tag, image_age))
             return None
 
-    print('---------------------------------')
     pool = ThreadPool(limit_threads(tags_list))
     result = list(x for x in pool.map(newer, tags_list) if x)
     pool.close()
@@ -877,6 +875,7 @@ def get_newer_tags(registry, image_name, hours, tags_list):
 def get_datetime_tags(registry, image_name, tags_list):
     if not tags_list:
         return None
+
     def newer(tag):
         image_config = registry.get_tag_config(image_name, tag)
         if not image_config:
@@ -891,11 +890,22 @@ def get_datetime_tags(registry, image_name, tags_list):
             "datetime": parse(image_age).astimezone(tzutc())
         }
 
-    print('---------------------------------')
     pool = ThreadPool(limit_threads(tags_list))
     result = list(x for x in pool.map(newer, tags_list) if x)
     pool.close()
     pool.join()
+    return result
+
+
+def find_images(image_list, name_list):
+    if image_list is None or name_list is None:
+        return []
+    result = []
+    for image in image_list:
+        for image_name in name_list:
+            if image == image_name:
+                result.append(image)
+                break
     return result
 
 
@@ -998,23 +1008,41 @@ def main_loop(args):
     if args.delete and not args.delete_all:
         print("Will keep last {0} tags independent from other search criteria.".format(keep_last_versions))
 
-    if args.image is not None:
-        image_list = args.image
+    all_image_list = registry.list_images()
+    if not all_image_list:
+        print("No repositories found in the registry.")
+        exit(0)
+
+    image_list = []
+    if not args.image and not args.images_like:
+        image_list = all_image_list
     else:
-        image_list = registry.list_images()
+        filtered_image_list = []
+        if args.image:
+            filtered_image_list.extend(find_images(image_list=all_image_list, name_list=args.image))
+            if not filtered_image_list:
+                print("No image repositories found for images: {0}".format(args.image))
+                exit(1)
         if args.images_like:
-            image_list = find_images_like(image_list, args.images_like)
+            filtered_image_list.extend(find_images_like(all_image_list, args.images_like))
+            if not filtered_image_list:
+                print("No image repositories found for images like: {0}".format(args.images_like))
+                exit(1)
+        image_list = list(set(filtered_image_list))
 
     # loop through registry's images
     # or through the ones given in command line
+    inage_list_separator = "================================="
     for image_name in image_list:
-        print("---------------------------------")
+        print(inage_list_separator)
+        inage_list_separator = "\n\n================================="
         print("Image: {0}".format(image_name))
+        print("\n---------------------------------")
 
         all_tags_list = registry.list_tags(image_name)
 
         if not all_tags_list:
-            print("  no tags found!")
+            print("No tags found. Image repository may be empty.")
             continue
 
         if args.tags_like:
@@ -1027,11 +1055,11 @@ def main_loop(args):
             image_tags_header = "All tags in image repository \"{0}\":".format(image_name)
 
         if not tags_list:
-            print("\n\nNo tags with digest qualified for removal found in image repository \"{0}\":".format(image_name))
+            print("\nNo tags qualified for removal found in image repository \"{0}\".".format(image_name))
             continue
         else:
+            #print("\n")
             print(image_tags_header)
-            print("---------------------------------")
             for tag in tags_list:
                 print("  tag: {0}".format(tag))
                 if args.layers:
@@ -1049,8 +1077,9 @@ def main_loop(args):
 
         if not delete:
             continue
-
-        print("\n\nStart filtering tags according to specified parameters:")
+        print("\n-------------------------------------------------------")
+        print("Start filtering tags according to specified parameters:")
+        print("-------------------------------------------------------\n")
         if args.tags_like and not args.force:
             tag_list_to_keep.extend(get_tags_unlike(args.tags_like, all_tags_list))
         else:
@@ -1081,11 +1110,11 @@ def main_loop(args):
         tag_list_to_keep = list(set(tag_list_to_keep))  # Eliminate duplicates
 
         if not tags_list_to_delete:
-            print("\n\nNo tags with digest qualified for removal found in image repository \"{0}\":".format(image_name))
+            print("\nNo tags qualified for removal found in image repository \"{0}\".".format(image_name))
         else:
             if tag_list_to_keep:
-                print("\n\n{0} tags shall be kept in image repository \"{1}\":".format(len(tag_list_to_keep), image_name))
-                print("---------------------------------")
+                print("\n---------------------------------")
+                print("{0} tags shall be kept in image repository \"{1}\":\n".format(len(tag_list_to_keep), image_name))
                 for tag in tag_list_to_keep:
                     print("  tag: {0}".format(tag))
                     if args.layers:
@@ -1097,8 +1126,8 @@ def main_loop(args):
                                 print("    layer: {0}".format(
                                     layer['blobSum']))
 
-            print("\n\n{0} tags can be removed from image repository \"{1}\":".format(len(tags_list_to_delete), image_name))
-            print("---------------------------------")
+            print("\n---------------------------------")
+            print("{0} tags can be removed from image repository \"{1}\":\n".format(len(tags_list_to_delete), image_name))
             for tag in tags_list_to_delete:
                 print("  tag: {0}".format(tag))
                 if args.layers:
@@ -1109,8 +1138,6 @@ def main_loop(args):
                         else:
                             print("    layer: {0}".format(
                                 layer['blobSum']))
-            print("\n\nChecking digest relationships:")
-            print("---------------------------------")
             digests_to_delete = find_digests_to_delete(registry, image_name, tags_list_to_delete, tag_list_to_keep)
             delete_digests(registry, image_name, args.dry_run, digests_to_delete)
 
