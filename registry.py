@@ -1048,7 +1048,7 @@ def main_loop(args):
         tag_list_to_keep = []
 
         if not delete:
-            exit(0)
+            continue
 
         print("\n\nStart filtering tags according to specified parameters:")
         if args.tags_like and not args.force:
