@@ -838,6 +838,7 @@ def main_loop(args):
                     tag for tag in tags_list if tag not in tags_list_to_delete]
                 keep_tags.extend(tags_list_to_keep)
 
+            keep_tags.sort() # Make order deterministic for testing
             delete_tags(
                 registry, image_name, args.dry_run,
                 tags_list_to_delete, keep_tags)
