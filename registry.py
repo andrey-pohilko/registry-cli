@@ -796,7 +796,8 @@ def main_loop(args):
             (image_name, tag_name) = image_name.split(":")
             all_tags_list = registry.list_tags(image_name)
             if not tag_name in all_tags_list:
-                print("  no such tag: {0}".format(tag_name))
+                print("  no such image: {0}:{1}".format(image_name, tag_name))
+                continue
             tags_list = set([tag_name])
         else:
             all_tags_list = registry.list_tags(image_name)
