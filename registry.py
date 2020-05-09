@@ -791,13 +791,21 @@ def main_loop(args):
         print("---------------------------------")
         print("Image: {0}".format(image_name))
 
-        all_tags_list = registry.list_tags(image_name)
+        # get tags from image name if any
+        if ":" in image_name:
+            (image_name, tag_name) = image_name.split(":")
+            all_tags_list = registry.list_tags(image_name)
+            if not tag_name in all_tags_list:
+                print("  no such tag: {0}".format(tag_name))
+            tags_list = set([tag_name])
+        else:
+            all_tags_list = registry.list_tags(image_name)
 
-        if not all_tags_list:
-            print("  no tags!")
-            continue
+            if not all_tags_list:
+                print("  no tags!")
+                continue
 
-        tags_list = get_tags(all_tags_list, image_name, args.tags_like)
+            tags_list = get_tags(all_tags_list, image_name, args.tags_like)
 
         # print(tags and optionally layers
         for tag in tags_list:
