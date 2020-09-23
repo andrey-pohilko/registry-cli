@@ -811,9 +811,11 @@ def main_loop(args):
                         print("    layer: {0}".format(
                             layer['blobSum']))
 
-        # add tags to "tags_to_keep" list, if we have regexp "tags_to_keep"
-        # entries or a number of hours for "keep_by_hours":
+        # add tags to "tags_to_keep" list if we have regexp "tags_to_keep"
+        # entries, a number of hours for "keep_by_hours" or if the user
+        # explicitly specified tags to always keep.
         keep_tags = []
+        keep_tags.extend(args.keep_tags)
         if args.keep_tags_like:
             keep_tags.extend(get_tags_like(args.keep_tags_like, tags_list))
         if args.keep_by_hours:
@@ -836,13 +838,13 @@ def main_loop(args):
                     tag for tag in tags_list if tag not in tags_list_to_delete]
                 keep_tags.extend(tags_list_to_keep)
 
+            keep_tags.sort() # Make order deterministic for testing
             delete_tags(
                 registry, image_name, args.dry_run,
                 tags_list_to_delete, keep_tags)
 
         # delete tags by age in hours
         if args.delete_by_hours:
-            keep_tags.extend(args.keep_tags)
             delete_tags_by_age(registry, image_name, args.dry_run,
                                args.delete_by_hours, keep_tags)
 

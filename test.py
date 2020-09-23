@@ -853,6 +853,32 @@ class TestKeepImagesLike(unittest.TestCase):
         keep_images_like_patched.assert_not_called()
 
 
+class TestKeepTags(unittest.TestCase):
+    @staticmethod
+    def create_mock_registry(host, login, no_validate_ssl, digest_method="HEAD"):
+        r = Registry._create(host, login, no_validate_ssl, digest_method)
+        r.http = MockRequests()
+        r.list_images = MagicMock(return_value=['a'])
+        r.list_tags = MagicMock(return_value=['1', '2', '3', '4', '5', '6', '7'])
+        return r
+
+    # We store the actual mock registry here so we can later compare it in
+    # `assert_called_with()`.
+    mock_registry = create_mock_registry.__func__('localhost:8989', None, True)
+
+    def return_mock_registry(self, host, login, no_validate_ssl, digest_method="HEAD"):
+        return TestKeepTags.mock_registry
+
+    @patch('registry.Registry.create', return_mock_registry)
+    @patch('registry.get_auth_schemes')  # called in main_loop, turn to noop
+    @patch('registry.delete_tags')
+    def test_keep_tags(self, delete_tags_patched, get_auth_schemes_patched):
+        # Check if delete_tags is called from main_loop (directly or indirectly
+        # through delete_tags_by_age) with `keep_tags` set to the tags we want to keep.
+        main_loop(parse_args(('--delete', '--num', '5', '-r', 'localhost:8989', '--keep-tags', '1')))
+        delete_tags_patched.assert_called_with(TestKeepTags.mock_registry, 'a', False, ['1', '2'], ['1', '3', '4', '5', '6', '7'])
+
+
 class TestArgParser(unittest.TestCase):
 
     def test_no_args(self):
