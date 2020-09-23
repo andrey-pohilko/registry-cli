@@ -140,6 +140,12 @@ Note that deleting by age will not prevent more recent tags from being deleted i
 ```
   registry.py -r https://example.com:5000 --dry-run --delete --keep-by-hours 72 --keep-tags-like latest
 ```
+
+Alternative method of deleting an explicit tag of an image:
+```
+  registry.py -r https://example.com:5000 --dry-run --delete --num 0 --image example:latest
+```
+
 ## Disable ssl verification
 
 If you are using docker registry with a self signed ssl certificate, you can disable ssl verification:
