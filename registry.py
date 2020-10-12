@@ -797,7 +797,10 @@ def main_loop(args):
             print("  no tags!")
             continue
 
-        tags_list = get_tags(all_tags_list, image_name, args.tags_like)
+        if args.order_by_date:
+            tags_list = get_ordered_tags(registry, image_name, all_tags_list, args.order_by_date)
+        else:
+            tags_list = get_tags(all_tags_list, image_name, args.tags_like)
 
         # print(tags and optionally layers
         for tag in tags_list:
