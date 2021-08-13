@@ -322,6 +322,16 @@ class Registry:
         if tag_digest is None:
             return False
 
+        # delete tag reference 
+        delete_result = self.send("/v2/{0}/manifests/{1}".format(
+            image_name, tag), method="DELETE")
+
+        if delete_result is None:
+            print("failed, error: {0}".format(self.last_error))
+            print(get_error_explanation("delete_tag", self.last_error))
+            return False
+
+        # delete tag digest
         delete_result = self.send("/v2/{0}/manifests/{1}".format(
             image_name, tag_digest), method="DELETE")
 
