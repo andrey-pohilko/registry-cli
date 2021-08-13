@@ -120,6 +120,16 @@ In the following case, all tags beginning with "snapshot-" will be deleted, save
 ```
 The last parameter is also available as regexp option with `--keep-tags-like`.
 
+You can also use `--order-by-date` options in order to sort images and tags by date instead of tag name, useful if your tag names are not in a fixed order.
+
+```
+  registry.py -l user:pass -r https://example.com:5000 --tags-like "snapshot-" --order-by-date
+```
+
+Delete tag starting with `snapshot-` keeping the latest 5, ordered by date
+```
+  registry.py -l user:pass -r https://example.com:5000 --delete --tags-like "snapshot-" --order-by-date --num 5
+```
 
 Delete all tags for particular image (e.g. delete all ubuntu tags):
 ```
