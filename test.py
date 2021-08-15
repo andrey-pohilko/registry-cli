@@ -547,7 +547,7 @@ class TestDeletion(unittest.TestCase):
         response = self.registry.delete_tag(
             'image1', 'test_tag', False, keep_tag_digests)
         self.assertEqual(response, True)
-        self.assertEqual(self.registry.http.request.call_count, 2)
+        self.assertEqual(self.registry.http.request.call_count, 3)
         self.registry.http.request.assert_called_with(
             "DELETE",
             "http://testdomain.com/v2/image1/manifests/MOCK_DIGEST_HEADER",
