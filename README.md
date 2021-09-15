@@ -165,14 +165,14 @@ garbage collection. So, make sure you run something like below
   cd [path-where-your-docker-compose.yml]
   docker-compose stop registry
   docker-compose run --rm \
-       registry bin/registry garbage-collect \
+       registry bin/registry garbage-collect --delete-untagged \
        /etc/docker/registry/config.yml
   docker-compose up -d registry
 ```
 or (if you are not using docker-compose):
 ```
   docker stop registry:2
-  docker run --rm registry:2 bin/registry garbage-collect \
+  docker run --rm registry:2 bin/registry garbage-collect --delete-untagged \
        /etc/docker/registry/config.yml
   docker start registry:2
 ```
