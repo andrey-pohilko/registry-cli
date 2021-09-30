@@ -31,7 +31,7 @@ You can download ready-made docker image with the script and all python dependen
 In this case, replace `registry.py` with `docker run --rm anoxis/registry-cli`
 in all commands below, e.g.
 ```
-    docker run --rm anoxis/registry-cli -r http://example.com:5000
+    docker run --network=host --rm anoxis/registry-cli -r http://example.com:5000
 ```
 
 Note: when you use the docker image and registry on the same computer (registry is on localhost), then due to internal network created by docker you have to link to the registry's network and refer registry container by its name, not localhost.
