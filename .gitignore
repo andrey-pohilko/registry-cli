@@ -5,3 +5,4 @@
 *.pyc
 venv/
 pyvenv.cfg
+Pipfile*

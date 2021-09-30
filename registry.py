@@ -559,6 +559,12 @@ for more detail on garbage collection read here:
               'Useful if your tag names are not in a fixed order.'),
         action='store_true'
     )
+    parser.add_argument(
+        '--keep-images-like',
+        help=('List of images (regex check) that will be omitted from deletion if used in combination with --delete or --delete-all'),
+        default=[],
+        required=False
+    )
     return parser.parse_args(args)
 
 
@@ -720,6 +726,17 @@ def keep_images_like(image_list, regexp_list):
                 break
     return result
 
+def remove_images_like(image_list, regexp_list):
+    if image_list is None or regexp_list is None:
+        return []
+    result = []
+    regexp_list = list(map(re.compile, regexp_list))
+    for image in image_list:
+        for regexp in regexp_list:
+            if not re.search(regexp, image):
+                result.append(image)
+                break
+    return result
 
 def get_ordered_tags(registry, image_name, tags_list, order_by_date=False):
     if order_by_date:
@@ -784,6 +801,8 @@ def main_loop(args):
         image_list = registry.list_images()
         if args.images_like:
             image_list = keep_images_like(image_list, args.images_like)
+        if args.keep_images_like:
+            image_list = remove_images_like(image_list,args.keep_images_like)
 
     # loop through registry's images
     # or through the ones given in command line
