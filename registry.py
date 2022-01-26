@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+######
+# github repository: https://github.com/andrey-pohilko/registry-cli
+# 
+# please read more details about the script, usage options and license info there
+######
+
 import requests
 import ast
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -11,10 +17,11 @@ import sys
 import os
 import argparse
 import www_authenticate
-import _strptime
 from datetime import timedelta, datetime as dt
 from getpass import getpass
 from multiprocessing.pool import ThreadPool
+from dateutil.parser import parse
+from dateutil.tz import tzutc
 
 # this is a registry manipulator, can do following:
 # - list all images (including layers)
@@ -546,6 +553,12 @@ for more detail on garbage collection read here:
          default='POST',
          metavar="POST|GET"
     )
+    parser.add_argument(
+        '--order-by-date',
+        help=('Orders images by date instead of by tag name.'
+              'Useful if your tag names are not in a fixed order.'),
+        action='store_true'
+    )
     return parser.parse_args(args)
 
 
@@ -636,7 +649,7 @@ def delete_tags_by_age(registry, image_name, dry_run, hours, tags_to_keep):
             print("timestamp not found")
             continue
 
-        if dt.strptime(image_age[:-4], "%Y-%m-%dT%H:%M:%S.%f") < dt.now() - timedelta(hours=int(hours)):
+        if parse(image_age).astimezone(tzutc()) < dt.now(tzutc()) - timedelta(hours=int(hours)):
             print("will be deleted tag: {0} timestamp: {1}".format(
                 tag, image_age))
             tags_to_delete.append(tag)
@@ -655,7 +668,7 @@ def get_newer_tags(registry, image_name, hours, tags_list):
         if image_age == []:
             print("timestamp not found")
             return None
-        if dt.strptime(image_age[:-4], "%Y-%m-%dT%H:%M:%S.%f") >= dt.now() - timedelta(hours=int(hours)):
+        if parse(image_age).astimezone(tzutc()) >= dt.now(tzutc()) - timedelta(hours=int(hours)):
             print("Keeping tag: {0} timestamp: {1}".format(
                 tag, image_age))
             return tag
@@ -663,6 +676,29 @@ def get_newer_tags(registry, image_name, hours, tags_list):
             print("Will delete tag: {0} timestamp: {1}".format(
                 tag, image_age))
             return None
+
+    print('---------------------------------')
+    p = ThreadPool(4)
+    result = list(x for x in p.map(newer, tags_list) if x)
+    p.close()
+    p.join()
+    return result
+
+
+def get_datetime_tags(registry, image_name, tags_list):
+    def newer(tag):
+        image_config = registry.get_tag_config(image_name, tag)
+        if image_config == []:
+            print("tag not found")
+            return None
+        image_age = registry.get_image_age(image_name, image_config)
+        if image_age == []:
+            print("timestamp not found")
+            return None
+        return {
+            "tag": tag,
+            "datetime": parse(image_age).astimezone(tzutc())
+        }
 
     print('---------------------------------')
     p = ThreadPool(4)
@@ -683,6 +719,18 @@ def keep_images_like(image_list, regexp_list):
                 result.append(image)
                 break
     return result
+
+
+def get_ordered_tags(registry, image_name, tags_list, order_by_date=False):
+    if order_by_date:
+        tags_date = get_datetime_tags(registry, image_name, tags_list)
+        sorted_tags_by_date = sorted(
+            tags_date,
+            key=lambda x: x["datetime"]
+        )
+        return [x["tag"] for x in sorted_tags_by_date]
+
+    return sorted(tags_list, key=natural_keys)
 
 
 def main_loop(args):
@@ -749,7 +797,10 @@ def main_loop(args):
             print("  no tags!")
             continue
 
-        tags_list = get_tags(all_tags_list, image_name, args.tags_like)
+        if args.order_by_date:
+            tags_list = get_ordered_tags(registry, image_name, all_tags_list, args.order_by_date)
+        else:
+            tags_list = get_tags(all_tags_list, image_name, args.tags_like)
 
         # print(tags and optionally layers
         for tag in tags_list:
@@ -763,9 +814,11 @@ def main_loop(args):
                         print("    layer: {0}".format(
                             layer['blobSum']))
 
-        # add tags to "tags_to_keep" list, if we have regexp "tags_to_keep"
-        # entries or a number of hours for "keep_by_hours":
+        # add tags to "tags_to_keep" list if we have regexp "tags_to_keep"
+        # entries, a number of hours for "keep_by_hours" or if the user
+        # explicitly specified tags to always keep.
         keep_tags = []
+        keep_tags.extend(args.keep_tags)
         if args.keep_tags_like:
             keep_tags.extend(get_tags_like(args.keep_tags_like, tags_list))
         if args.keep_by_hours:
@@ -778,8 +831,8 @@ def main_loop(args):
             if args.delete_all:
                 tags_list_to_delete = list(tags_list)
             else:
-                tags_list_to_delete = sorted(tags_list, key=natural_keys)[
-                    :-keep_last_versions]
+                ordered_tags_list = get_ordered_tags(registry, image_name, tags_list, args.order_by_date)
+                tags_list_to_delete = ordered_tags_list[:-keep_last_versions]
 
                 # A manifest might be shared between different tags. Explicitly add those
                 # tags that we want to preserve to the keep_tags list, to prevent
@@ -788,13 +841,13 @@ def main_loop(args):
                     tag for tag in tags_list if tag not in tags_list_to_delete]
                 keep_tags.extend(tags_list_to_keep)
 
+            keep_tags.sort() # Make order deterministic for testing
             delete_tags(
                 registry, image_name, args.dry_run,
                 tags_list_to_delete, keep_tags)
 
         # delete tags by age in hours
         if args.delete_by_hours:
-            keep_tags.extend(args.keep_tags)
             delete_tags_by_age(registry, image_name, args.dry_run,
                                args.delete_by_hours, keep_tags)
 
