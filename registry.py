@@ -559,6 +559,13 @@ for more detail on garbage collection read here:
               'Useful if your tag names are not in a fixed order.'),
         action='store_true'
     )
+    parser.add_argument(
+        '--plain',
+        help=('Turn plain output, one image:tag per line.'
+              'Useful if your want to send the results to another command.'),
+        action='store_true',
+        default=False
+    )
     return parser.parse_args(args)
 
 
@@ -700,7 +707,8 @@ def get_datetime_tags(registry, image_name, tags_list):
             "datetime": parse(image_age).astimezone(tzutc())
         }
 
-    print('---------------------------------')
+    if not args.plain:
+        print('---------------------------------')
     p = ThreadPool(4)
     result = list(x for x in p.map(newer, tags_list) if x)
     p.close()
@@ -788,9 +796,9 @@ def main_loop(args):
     # loop through registry's images
     # or through the ones given in command line
     for image_name in image_list:
-        print("---------------------------------")
-        print("Image: {0}".format(image_name))
-
+        if not args.plain:
+            print("---------------------------------")
+            print("Image: {0}".format(image_name))
         all_tags_list = registry.list_tags(image_name)
 
         if not all_tags_list:
@@ -804,7 +812,11 @@ def main_loop(args):
 
         # print(tags and optionally layers
         for tag in tags_list:
-            print("  tag: {0}".format(tag))
+            if not args.plain:
+                print("  tag: {0}".format(tag))
+            else:
+                print("{0}:{1}".format(image_name, tag))
+
             if args.layers:
                 for layer in registry.list_tag_layers(image_name, tag):
                     if 'size' in layer:
