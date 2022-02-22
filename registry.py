@@ -47,8 +47,8 @@ from dateutil.tz import tzutc
 # https://docs.docker.com/registry/garbage-collection/
 
 
-# number of image versions to keep
-CONST_KEEP_LAST_VERSIONS = 10
+# number of image versions to list/keep
+CONST_NUM_LAST_VERSIONS = 10
 
 # print debug messages
 DEBUG = False
@@ -444,16 +444,16 @@ for more detail on garbage collection read here:
     parser.add_argument(
         '-d', '--delete',
         help=('If specified, delete all but last {0} tags '
-              'of all images').format(CONST_KEEP_LAST_VERSIONS),
+              'of all images').format(CONST_NUM_LAST_VERSIONS),
         action='store_const',
         default=False,
         const=True)
 
     parser.add_argument(
         '-n', '--num',
-        help=('Set the number of tags to keep'
-              '({0} if not set)').format(CONST_KEEP_LAST_VERSIONS),
-        default=CONST_KEEP_LAST_VERSIONS,
+        help=('Set the number of tags to list/keep'
+              '({0} if not set)').format(CONST_NUM_LAST_VERSIONS),
+        default=CONST_NUM_LAST_VERSIONS,
         nargs='?',
         metavar='N')
 
@@ -738,7 +738,7 @@ def main_loop(args):
 
     DEBUG = True if args.debug else False
 
-    keep_last_versions = int(args.num)
+    num_last_versions = int(args.num)
 
     if args.no_validate_ssl:
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -776,7 +776,7 @@ def main_loop(args):
     registry.auth_schemes = get_auth_schemes(registry,'/v2/_catalog')
 
     if args.delete:
-        print("Will delete all but {0} last tags".format(keep_last_versions))
+        print("Will delete all but {0} last tags".format(num_last_versions))
 
     if args.image is not None:
         image_list = args.image
@@ -790,7 +790,6 @@ def main_loop(args):
     for image_name in image_list:
         print("---------------------------------")
         print("Image: {0}".format(image_name))
-
         all_tags_list = registry.list_tags(image_name)
 
         if not all_tags_list:
@@ -798,13 +797,14 @@ def main_loop(args):
             continue
 
         if args.order_by_date:
-            tags_list = get_ordered_tags(registry, image_name, all_tags_list, args.order_by_date)
+            tags_list = get_ordered_tags(registry, image_name, all_tags_list, args.order_by_date)[-num_last_versions:]
         else:
             tags_list = get_tags(all_tags_list, image_name, args.tags_like)
 
         # print(tags and optionally layers
         for tag in tags_list:
             print("  tag: {0}".format(tag))
+
             if args.layers:
                 for layer in registry.list_tag_layers(image_name, tag):
                     if 'size' in layer:
@@ -832,7 +832,7 @@ def main_loop(args):
                 tags_list_to_delete = list(tags_list)
             else:
                 ordered_tags_list = get_ordered_tags(registry, image_name, tags_list, args.order_by_date)
-                tags_list_to_delete = ordered_tags_list[:-keep_last_versions]
+                tags_list_to_delete = ordered_tags_list[:-num_last_versions]
 
                 # A manifest might be shared between different tags. Explicitly add those
                 # tags that we want to preserve to the keep_tags list, to prevent
