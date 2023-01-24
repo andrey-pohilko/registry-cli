@@ -615,10 +615,12 @@ def delete_tags(
 def get_tags_like(args_tags_like, tags_list):
     result = set()
     for tag_like in args_tags_like:
-        print("tag like: {0}".format(tag_like))
+        if not args.plain:
+            print("tag like: {0}".format(tag_like))
         for tag in tags_list:
             if re.search(tag_like, tag):
-                print("Adding {0} to tags list".format(tag))
+                if not args.plain:
+                    print("Adding {0} to tags list".format(tag))
                 result.add(tag)
     return result
 
