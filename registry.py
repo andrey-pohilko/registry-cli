@@ -322,6 +322,16 @@ class Registry:
         if tag_digest is None:
             return False
 
+        # delete tag reference 
+        delete_result = self.send("/v2/{0}/manifests/{1}".format(
+            image_name, tag), method="DELETE")
+
+        if delete_result is None:
+            print("failed, error: {0}".format(self.last_error))
+            print(get_error_explanation("delete_tag", self.last_error))
+            return False
+
+        # delete tag digest
         delete_result = self.send("/v2/{0}/manifests/{1}".format(
             image_name, tag_digest), method="DELETE")
 
@@ -807,10 +817,16 @@ def main_loop(args):
             print("  no tags!")
             continue
 
-        if args.order_by_date:
-            tags_list = get_ordered_tags(registry, image_name, all_tags_list, args.order_by_date)
-        else:
+        
+        if args.tags_like:
             tags_list = get_tags(all_tags_list, image_name, args.tags_like)
+        else:
+            tags_list = all_tags_list
+
+        if args.order_by_date:
+            tags_list = get_ordered_tags(registry, image_name, tags_list, args.order_by_date)
+        #else:
+        #    tags_list = get_tags(all_tags_list, image_name, args.tags_like)
 
         # print(tags and optionally layers
         for tag in tags_list:
