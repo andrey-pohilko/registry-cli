@@ -265,7 +265,7 @@ class Registry:
         return None
 
     def list_images(self):
-        result = self.send('/v2/_catalog?n=10000')
+        result = self.send('/v2/_catalog?n=' + str(args.entries))
         if result is None:
             return []
 
@@ -455,6 +455,12 @@ for more detail on garbage collection read here:
               '({0} if not set)').format(CONST_KEEP_LAST_VERSIONS),
         default=CONST_KEEP_LAST_VERSIONS,
         nargs='?',
+        metavar='N')
+
+    parser.add_argument(
+        '-e', '--entries',
+        help=('Amount of images to list (Default: 1000)'),
+        default=1000,
         metavar='N')
 
     parser.add_argument(
