@@ -846,7 +846,10 @@ def main_loop(args):
                 tags_list_to_delete = list(tags_list)
             else:
                 ordered_tags_list = get_ordered_tags(registry, image_name, tags_list, args.order_by_date)
-                tags_list_to_delete = ordered_tags_list[:-keep_last_versions]
+                if keep_last_versions == 0:
+                    tags_list_to_delete = ordered_tags_list
+                else:
+                    tags_list_to_delete = ordered_tags_list[:-keep_last_versions]
 
                 # A manifest might be shared between different tags. Explicitly add those
                 # tags that we want to preserve to the keep_tags list, to prevent
