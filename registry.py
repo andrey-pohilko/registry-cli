@@ -187,8 +187,11 @@ def get_auth_schemes(r,path):
 class Registry:
 
     # this is required for proper digest processing
+    # for docker images: application/vnd.docker.distribution.manifest.v2+json
+    # for podman images: application/vnd.oci.image.manifest.v1+json
+    # without the latter, digests for podman images are not fetched and as a result, podman images are not removed
     HEADERS = {"Accept":
-               "application/vnd.docker.distribution.manifest.v2+json"}
+               "application/vnd.docker.distribution.manifest.v2+json,application/vnd.oci.image.manifest.v1+json"}
 
     def __init__(self):
         self.username = None
