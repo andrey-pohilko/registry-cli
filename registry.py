@@ -178,10 +178,9 @@ def get_auth_schemes(r,path):
         if DEBUG:
             print('[debug][docker] Auth schemes found:{0}'.format([m for m in oauth]))
         return [m.lower() for m in oauth]
-    else:
-        if DEBUG:
-            print('[debug][docker] No Auth schemes found')
-        return []
+    if DEBUG:
+        print('[debug][docker] No Auth schemes found')
+    return []
 
 # class to manipulate registry
 class Registry:
@@ -364,10 +363,7 @@ class Registry:
         if json_result['schemaVersion'] == 1:
             print("Docker schemaVersion 1 isn't supported for deleting by age now")
             sys.exit(1)
-        else:
-            tag_config = json_result['config']
-
-        return tag_config
+        return json_result['config']
 
     def get_image_age(self, image_name, image_config):
         container_header = {"Accept": "{0}".format(
@@ -393,10 +389,9 @@ class Registry:
             self.last_error = None
             image_age = json.loads(response.text)
             return image_age['created']
-        else:
-            print(" blob not found: {0}".format(self.last_error))
-            self.last_error = response.status_code
-            return []
+        print(" blob not found: {0}".format(self.last_error))
+        self.last_error = response.status_code
+        return []
 
 
 def parse_args(args=None):
@@ -681,10 +676,8 @@ def get_newer_tags(registry, image_name, hours, tags_list):
             print("Keeping tag: {0} timestamp: {1}".format(
                 tag, image_age))
             return tag
-        else:
-            print("Will delete tag: {0} timestamp: {1}".format(
-                tag, image_age))
-            return None
+        print("Will delete tag: {0} timestamp: {1}".format(tag, image_age))
+        return None
 
     print('---------------------------------')
     p = ThreadPool(4)
