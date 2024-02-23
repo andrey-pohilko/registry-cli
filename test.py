@@ -231,18 +231,18 @@ class TestListTags(unittest.TestCase):
     def test_list_tags_like_various(self):
         tags_list = set(['FINAL_0.1', 'SNAPSHOT_0.1',
                          "0.1.SNAP", "1.0.0_FINAL"])
-        self.assertEqual(get_tags(tags_list, "", set(
-            ["FINAL"])), set(["FINAL_0.1", "1.0.0_FINAL"]))
-        self.assertEqual(get_tags(tags_list, "", set(
-            ["SNAPSHOT"])), set(['SNAPSHOT_0.1']))
-        self.assertEqual(get_tags(tags_list, "", set()),
-                         set(['FINAL_0.1', 'SNAPSHOT_0.1', "0.1.SNAP", "1.0.0_FINAL"]))
-        self.assertEqual(get_tags(tags_list, "", set(["ABSENT"])), set())
-
-        self.assertEqual(
-            get_tags(tags_list, "IMAGE:TAG00", ""), set(["TAG00"]))
-        self.assertEqual(get_tags(tags_list, "IMAGE:TAG00", set(
-            ["WILL_NOT_BE_CONSIDERED"])), set(["TAG00"]))
+        for plain in [True, False]:
+            self.assertEqual(get_tags(tags_list, "", set(
+                ["FINAL"]), plain), set(["FINAL_0.1", "1.0.0_FINAL"]))
+            self.assertEqual(get_tags(tags_list, "", set(
+                ["SNAPSHOT"]), plain), set(['SNAPSHOT_0.1']))
+            self.assertEqual(get_tags(tags_list, "", set(), plain),
+                            set(['FINAL_0.1', 'SNAPSHOT_0.1', "0.1.SNAP", "1.0.0_FINAL"]))
+            self.assertEqual(get_tags(tags_list, "", set(["ABSENT"]), plain), set())
+            self.assertEqual(
+                get_tags(tags_list, "IMAGE:TAG00", "", plain), set(["TAG00"]))
+            self.assertEqual(get_tags(tags_list, "IMAGE:TAG00", set(
+                ["WILL_NOT_BE_CONSIDERED"]), plain), set(["TAG00"]))
 
 
 class TestListDigest(unittest.TestCase):
@@ -760,17 +760,19 @@ class TestGetDatetimeTags(unittest.TestCase):
         self.registry.http.reset_return_value(200, "MOCK_DIGEST")
 
     def test_get_datetime_tags(self):
-        self.assertEqual(
-            get_datetime_tags(self.registry, "imagename", ["latest"]),
-            [{"tag": "latest", "datetime": datetime(2017, 12, 27, 12, 47, 33, 511765, tzinfo=tzutc())}]
-        )
+        for plain in [True, False]:
+            self.assertEqual(
+                get_datetime_tags(self.registry, "imagename", ["latest"], plain),
+                [{"tag": "latest", "datetime": datetime(2017, 12, 27, 12, 47, 33, 511765, tzinfo=tzutc())}]
+            )
 
     def test_get_non_utc_datetime_tags(self):
         self.registry.get_image_age.return_value = "2019-07-18T16:33:15.864962122+02:00"
-        self.assertEqual(
-            get_datetime_tags(self.registry, "imagename", ["latest"]),
-            [{"tag": "latest", "datetime": datetime(2019, 7, 18, 16, 33, 15, 864962, tzinfo=tzoffset(None, 7200))}]
-        )
+        for plain in [True, False]:
+            self.assertEqual(
+                get_datetime_tags(self.registry, "imagename", ["latest"], plain),
+                [{"tag": "latest", "datetime": datetime(2019, 7, 18, 16, 33, 15, 864962, tzinfo=tzoffset(None, 7200))}]
+            )
 
 
 class TestGetOrderedTags(unittest.TestCase):

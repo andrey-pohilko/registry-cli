@@ -612,24 +612,24 @@ def delete_tags(
 # registry.delete_tag_layer(image_name, layer_digest, dry_run)
 
 
-def get_tags_like(args_tags_like, tags_list):
+def get_tags_like(args_tags_like, tags_list, plain):
     result = set()
     for tag_like in args_tags_like:
-        if not args.plain:
+        if not plain:
             print("tag like: {0}".format(tag_like))
         for tag in tags_list:
             if re.search(tag_like, tag):
-                if not args.plain:
+                if not plain:
                     print("Adding {0} to tags list".format(tag))
                 result.add(tag)
     return result
 
 
-def get_tags(all_tags_list, image_name, tags_like):
+def get_tags(all_tags_list, image_name, tags_like, plain):
     # check if there are args for special tags
     result = set()
     if tags_like:
-        result = get_tags_like(tags_like, all_tags_list)
+        result = get_tags_like(tags_like, all_tags_list, plain)
     else:
         result.update(all_tags_list)
 
@@ -694,7 +694,7 @@ def get_newer_tags(registry, image_name, hours, tags_list):
     return result
 
 
-def get_datetime_tags(registry, image_name, tags_list):
+def get_datetime_tags(registry, image_name, tags_list, plain):
     def newer(tag):
         image_config = registry.get_tag_config(image_name, tag)
         if image_config == []:
@@ -709,7 +709,7 @@ def get_datetime_tags(registry, image_name, tags_list):
             "datetime": parse(image_age).astimezone(tzutc())
         }
 
-    if not args.plain:
+    if not plain:
         print('---------------------------------')
     p = ThreadPool(4)
     result = list(x for x in p.map(newer, tags_list) if x)
@@ -810,7 +810,7 @@ def main_loop(args):
         if args.order_by_date:
             tags_list = get_ordered_tags(registry, image_name, all_tags_list, args.order_by_date)
         else:
-            tags_list = get_tags(all_tags_list, image_name, args.tags_like)
+            tags_list = get_tags(all_tags_list, image_name, args.tags_like, args.plain)
 
         # print(tags and optionally layers
         for tag in tags_list:
