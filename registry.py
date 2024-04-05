@@ -726,7 +726,7 @@ def keep_images_like(image_list, regexp_list):
 
 def get_ordered_tags(registry, image_name, tags_list, order_by_date=False):
     if order_by_date:
-        tags_date = get_datetime_tags(registry, image_name, tags_list)
+        tags_date = get_datetime_tags(registry, image_name, tags_list, args.plain)
         sorted_tags_by_date = sorted(
             tags_date,
             key=lambda x: x["datetime"]
