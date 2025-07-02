@@ -2,7 +2,7 @@
 
 ######
 # github repository: https://github.com/andrey-pohilko/registry-cli
-# 
+#
 # please read more details about the script, usage options and license info there
 ######
 
@@ -263,8 +263,8 @@ class Registry:
         self.last_error = result.status_code
         return None
 
-    def list_images(self):
-        result = self.send('/v2/_catalog?n=10000')
+    def list_images(self, n):
+        result = self.send(f'/v2/_catalog?n={n}')
         if result is None:
             return []
 
@@ -561,6 +561,11 @@ for more detail on garbage collection read here:
         action='store_true',
         default=False
     )
+    parser.add_argument(
+        '--number-of-images',
+        help=('Number of images to get from /v2/catalog'),
+        default=10000
+    )
     return parser.parse_args(args)
 
 
@@ -724,9 +729,9 @@ def keep_images_like(image_list, regexp_list):
     return result
 
 
-def get_ordered_tags(registry, image_name, tags_list, order_by_date=False):
+def get_ordered_tags(registry, image_name, tags_list, order_by_date=False, plain=False):
     if order_by_date:
-        tags_date = get_datetime_tags(registry, image_name, tags_list)
+        tags_date = get_datetime_tags(registry, image_name, tags_list, plain)
         sorted_tags_by_date = sorted(
             tags_date,
             key=lambda x: x["datetime"]
@@ -784,7 +789,7 @@ def main_loop(args):
     if args.image is not None:
         image_list = args.image
     else:
-        image_list = registry.list_images()
+        image_list = registry.list_images(args.number_of_images)
         if args.images_like:
             image_list = keep_images_like(image_list, args.images_like)
 
@@ -801,7 +806,7 @@ def main_loop(args):
             continue
 
         if args.order_by_date:
-            tags_list = get_ordered_tags(registry, image_name, all_tags_list, args.order_by_date)
+            tags_list = get_ordered_tags(registry, image_name, all_tags_list, args.order_by_date, args.plain)
         else:
             tags_list = get_tags(all_tags_list, image_name, args.tags_like, args.plain)
 
@@ -838,7 +843,7 @@ def main_loop(args):
             if args.delete_all:
                 tags_list_to_delete = list(tags_list)
             else:
-                ordered_tags_list = get_ordered_tags(registry, image_name, tags_list, args.order_by_date)
+                ordered_tags_list = get_ordered_tags(registry, image_name, tags_list, args.order_by_date, args.plain)
                 tags_list_to_delete = ordered_tags_list[:-keep_last_versions]
 
                 # A manifest might be shared between different tags. Explicitly add those
