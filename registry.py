@@ -759,28 +759,12 @@ def main_loop(args):
         if args.login is None:
             print("Please provide -l when using -w")
             sys.exit(1)
-
-        if ':' in args.login:
-            (username, password) = args.login.split(':', 1)
-        else:
-            username = args.login
-
-        if sys.stdin.isatty():
-            # likely interactive usage
-            password = getpass()
-
-        else:
-            # allow password to be piped or redirected in
-            password = sys.stdin.read()
-
-            if len(password) == 0:
-                print("Password was not provided")
-                sys.exit(1)
-
-            if password[-(len(os.linesep)):] == os.linesep:
-                password = password[0:-(len(os.linesep))]
-
-        args.login = username + ':' + password
+        username = args.login.split(':', 1)[0]
+        password = getpass() if sys.stdin.isatty() else sys.stdin.read()
+        if not password:
+            print("Password was not provided")
+            sys.exit(1)
+        args.login = username + ':' + password.strip()
 
     registry = Registry.create(args.host, args.login, args.no_validate_ssl,
                                args.digest_method)
