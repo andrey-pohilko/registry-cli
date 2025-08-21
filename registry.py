@@ -735,7 +735,7 @@ def keep_images_like(image_list, regexp_list):
 
 def get_ordered_tags(registry, image_name, tags_list, order_by_date=False):
     if order_by_date:
-        tags_date = get_datetime_tags(registry, image_name, tags_list)
+        tags_date = get_datetime_tags(registry, image_name, tags_list, args.plain)
         sorted_tags_by_date = sorted(
             tags_date,
             key=lambda x: x["datetime"]
@@ -809,10 +809,13 @@ def main_loop(args):
             print("  no tags!")
             continue
 
-        if args.order_by_date:
-            tags_list = get_ordered_tags(registry, image_name, all_tags_list, args.order_by_date)
-        else:
+        if args.tags_like:
             tags_list = get_tags(all_tags_list, image_name, args.tags_like, args.plain)
+        else:
+            tags_list = all_tags_list
+
+        if args.order_by_date:
+            tags_list = get_ordered_tags(registry, image_name, tags_list, args.order_by_date)
 
         # print(tags and optionally layers
         for tag in tags_list:
@@ -836,7 +839,7 @@ def main_loop(args):
         keep_tags = []
         keep_tags.extend(args.keep_tags)
         if args.keep_tags_like:
-            keep_tags.extend(get_tags_like(args.keep_tags_like, tags_list))
+            keep_tags.extend(get_tags_like(args.keep_tags_like, tags_list, args.plain))
         if args.keep_by_hours:
             keep_tags.extend(get_newer_tags(registry, image_name,
                                             args.keep_by_hours, tags_list))
@@ -848,7 +851,10 @@ def main_loop(args):
                 tags_list_to_delete = list(tags_list)
             else:
                 ordered_tags_list = get_ordered_tags(registry, image_name, tags_list, args.order_by_date)
-                tags_list_to_delete = ordered_tags_list[:-keep_last_versions]
+                if keep_last_versions == 0:
+                    tags_list_to_delete = ordered_tags_list
+                else:
+                    tags_list_to_delete = ordered_tags_list[:-keep_last_versions]
 
                 # A manifest might be shared between different tags. Explicitly add those
                 # tags that we want to preserve to the keep_tags list, to prevent
